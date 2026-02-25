@@ -1,42 +1,41 @@
 services:
-  - type: web
-    name: slci-chatbot
-    env: python
-    # ✅ Build command: upgrade tools + install deps
-    buildCommand: |
-      pip install --upgrade pip setuptools wheel
-      pip install -r requirements.txt
-    # ✅ Start command: Gunicorn with Render $PORT binding
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
-    envVars:
-      # ✅ Python 3.10 (stable & compatible with all your packages)
-      - key: PYTHON_VERSION
-        value: "3.10"
-      - key: SECRET_KEY
-        generateValue: true
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        value: "5432"
-      - key: DB_NAME
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: OLLAMA_HOST
-        value: http://localhost:11434
-      - key: OLLAMA_MODEL
-        value: mistral
-      - key: EMAIL_HOST
-        value: smtp.gmail.com
-      - key: EMAIL_PORT
-        value: "587"
-      - key: EMAIL_USER
-        sync: false
-      - key: EMAIL_PASSWORD
-        sync: false
-      - key: GOOGLE_SHEET_ID
-        sync: false
-      - key: GOOGLE_SHEET_ENABLED
-        value: "true"
+- type: web
+  name: slci-chatbot
+  env: python
+  # ✅ CRITICAL: Use Python 3.10 (stable & compatible)
+  buildCommand: |
+    pip install --upgrade pip setuptools wheel
+    pip install -r requirements.txt
+  startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
+  envVars:
+    # ✅ MUST BE 3.10 or 3.11 (NOT 3.14)
+    - key: PYTHON_VERSION
+      value: "3.10"
+    - key: SECRET_KEY
+      generateValue: true
+    - key: DB_HOST
+      sync: false
+    - key: DB_PORT
+      value: "5432"
+    - key: DB_NAME
+      sync: false
+    - key: DB_USER
+      sync: false
+    - key: DB_PASSWORD
+      sync: false
+    - key: OLLAMA_HOST
+      value: http://localhost:11434
+    - key: OLLAMA_MODEL
+      value: mistral
+    - key: EMAIL_HOST
+      value: smtp.gmail.com
+    - key: EMAIL_PORT
+      value: "587"
+    - key: EMAIL_USER
+      sync: false
+    - key: EMAIL_PASSWORD
+      sync: false
+    - key: GOOGLE_SHEET_ID
+      sync: false
+    - key: GOOGLE_SHEET_ENABLED
+      value: "true"

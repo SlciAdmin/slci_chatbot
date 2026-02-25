@@ -1,4 +1,4 @@
-# === Build Tools (CRITICAL - fixes pkg_resources error) ===
+# === Build Tools (CRITICAL) ===
 pip>=23.0
 setuptools>=65.0.0
 wheel>=0.41.0
@@ -8,13 +8,18 @@ flask==2.3.0
 requests==2.31.0
 python-dotenv==1.0.0
 beautifulsoup4==4.12.0
+
+# ✅ CRITICAL FIX: Use psycopg2-binary compatible with Python 3.10
 psycopg2-binary==2.9.9
+
+# === PDF Generation ===
 reportlab==4.0.0
+pillow>=10.0.0
 
 # === Google Sheets Integration ===
 gspread==5.12.4
 google-auth==2.23.0
 google-auth-oauthlib==1.1.0
 
-# === WSGI Server (Python 3.10+ Compatible) ===
+# === WSGI Server ===
 gunicorn==21.2.0
