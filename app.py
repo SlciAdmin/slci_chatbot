@@ -599,31 +599,7 @@ pending_lock = Lock()
 # ============================================================================
 # DOWNLOAD REQUEST ROUTE
 # ============================================================================
-@app.route("/request-download", methods=["POST"])
-def request_download():
-    """Step 1: Validate form, log to DB, return download token (JSON)"""
-    try:
-        data = request.json
-        if not data:
-            return jsonify({"success": False, "error": "No data provided"}), 400
-        required_fields = ['fullName', 'companyName', 'email', 'contactNumber', 'state', 'actType']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({"success": False, "error": f"Missing field: {field}"}), 400
-        if 'designation' not in data:
-            data['designation'] = 'Not Provided'
-        if 'rating' not in data:
-            data['rating'] = 0
-        download_token = f"DL{secrets.token_hex(8)}"
-        ip_address = request.remote_addr
-        user_agent = request.headers.get('User-Agent')
-        download_id = log_download_request(data, ip_address, user_agent)
-        with pending_lock:
-            pending_downloads[download_token] = {'data': data, 'download_id': download_id, 'created_at': datetime.now(), 'ip': ip_address}
-        return jsonify({"success": True, "downloadId": download_id, "downloadToken": download_token, "message": "Form submitted successfully"})
-    except Exception as e:
-        print(f"Download Request Error: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ============================================================================
 # PDF GENERATION ROUTE
@@ -1290,73 +1266,371 @@ def generate_enquiry_id(prefix="ENQ"):
     random_part = secrets.token_hex(3).upper()
     return f"{prefix}-{date_part}-{random_part}"
 
+# ============================================================================
+# FIXED ENQUIRY ROUTES - Database First, Email Second
+# ============================================================================
+
 @app.route("/submit-service-enquiry", methods=["POST"])
 def submit_service_enquiry():
-    """Handle service enquiry submission with validation, email, and database logging"""
+    """Handle service enquiry submission - FIXED: Database first, email second"""
     conn = None
     try:
         data = request.json
+        print(f"📝 Received service enquiry: {data}")
+        
+        # Validate required fields
         required_fields = ['fullName', 'companyName', 'email', 'contactNumber', 'service', 'query']
         for field in required_fields:
             if not data.get(field):
+                print(f"❌ Missing field: {field}")
                 return jsonify({"success": False, "error": f"Missing {field}"}), 400
+        
+        # Validate email
         if not validate_email(data['email']):
             return jsonify({"success": False, "error": "Invalid email format"}), 400
+        
+        # Validate phone
         if not validate_phone(data['contactNumber']):
             return jsonify({"success": False, "error": "Invalid phone number"}), 400
-        enquiry_id = generate_enquiry_id()
-        email_sent = send_service_enquiry_email(data, enquiry_id)
-        if email_sent:
-            conn = get_db_connection()
-            if conn:
-                with conn.cursor() as cursor:
-                    cursor.execute('''INSERT INTO service_enquiries (enquiry_id, full_name, company_name, email, contact_number, service, query, ip_address) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''', (enquiry_id, data['fullName'], data['companyName'], data['email'], data['contactNumber'], data['service'], data['query'], request.remote_addr))
-                    conn.commit()
-            sheet_data = {'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'enquiry_id': enquiry_id, 'full_name': data['fullName'], 'company_name': data['companyName'], 'email': data['email'], 'contact_number': data['contactNumber'], 'service': data['service'], 'query': data['query'], 'ip_address': request.remote_addr, 'status': 'pending'}
+        
+        # Generate enquiry ID
+        enquiry_id = generate_enquiry_id("SER")
+        
+        # STEP 1: Insert into database FIRST (independent of email)
+        db_success = False
+        try:
+            pool = get_db_pool()
+            if pool:
+                with pool.connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO service_enquiries 
+                            (enquiry_id, full_name, company_name, email, contact_number, service, query, ip_address, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            enquiry_id,
+                            data['fullName'],
+                            data['companyName'],
+                            data['email'],
+                            data['contactNumber'],
+                            data['service'],
+                            data['query'],
+                            request.remote_addr,
+                            'pending'
+                        ))
+                        conn.commit()
+                        db_success = True
+                        print(f"✅ Database insert successful: {enquiry_id}")
+            else:
+                print("⚠️ No database pool available")
+        except Exception as e:
+            print(f"❌ Database insert error: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # STEP 2: Send email (don't fail if email fails)
+        email_sent = False
+        try:
+            email_sent = send_service_enquiry_email(data, enquiry_id)
+        except Exception as e:
+            print(f"❌ Email error (continuing anyway): {e}")
+        
+        # STEP 3: Log to Google Sheets
+        try:
+            sheet_data = {
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'enquiry_id': enquiry_id,
+                'full_name': data['fullName'],
+                'company_name': data['companyName'],
+                'email': data['email'],
+                'contact_number': data['contactNumber'],
+                'service': data['service'],
+                'query': data['query'],
+                'ip_address': request.remote_addr,
+                'status': 'pending'
+            }
             append_to_google_sheet("Service_Enquiries", sheet_data)
-            return jsonify({"success": True, "message": "Enquiry submitted successfully", "enquiryId": enquiry_id})
+        except Exception as e:
+            print(f"⚠️ Google Sheets error: {e}")
+        
+        if db_success:
+            return jsonify({
+                "success": True, 
+                "message": "Enquiry submitted successfully", 
+                "enquiryId": enquiry_id
+            })
         else:
-            return jsonify({"success": False, "error": "Failed to send email. Please try again."}), 500
+            return jsonify({
+                "success": False, 
+                "error": "Database error - please try again"
+            }), 500
+            
     except Exception as e:
-        print(f"Service Enquiry Error: {str(e)}")
+        print(f"❌ Service Enquiry Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
-    finally:
-        if conn:
-            release_db_connection(conn)
 
 @app.route("/submit-fee-enquiry", methods=["POST"])
 def submit_fee_enquiry():
-    """Handle fee enquiry submission with validation, email, and database logging"""
-    conn = None
+    """Handle fee enquiry submission - FIXED: Database first, email second"""
     try:
         data = request.json
+        print(f"💰 Received fee enquiry: {data}")
+        
+        # Validate required fields
         required_fields = ['fullName', 'companyName', 'email', 'contactNumber', 'description']
         for field in required_fields:
             if not data.get(field):
+                print(f"❌ Missing field: {field}")
                 return jsonify({"success": False, "error": f"Missing {field}"}), 400
+        
+        # Validate email
         if not validate_email(data['email']):
             return jsonify({"success": False, "error": "Invalid email format"}), 400
+        
+        # Validate phone
         if not validate_phone(data['contactNumber']):
             return jsonify({"success": False, "error": "Invalid phone number"}), 400
-        enquiry_id = generate_enquiry_id()
-        email_sent = send_fee_enquiry_email(data, enquiry_id)
-        if email_sent:
-            conn = get_db_connection()
-            if conn:
-                with conn.cursor() as cursor:
-                    cursor.execute('''INSERT INTO fee_enquiries (enquiry_id, full_name, company_name, email, contact_number, description, ip_address) VALUES (%s, %s, %s, %s, %s, %s, %s)''', (enquiry_id, data['fullName'], data['companyName'], data['email'], data['contactNumber'], data['description'], request.remote_addr))
-                    conn.commit()
-            sheet_data = {'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'enquiry_id': enquiry_id, 'full_name': data['fullName'], 'company_name': data['companyName'], 'email': data['email'], 'contact_number': data['contactNumber'], 'description': data['description'], 'ip_address': request.remote_addr, 'status': 'pending'}
+        
+        # Generate enquiry ID
+        enquiry_id = generate_enquiry_id("FEE")
+        
+        # STEP 1: Insert into database FIRST
+        db_success = False
+        try:
+            pool = get_db_pool()
+            if pool:
+                with pool.connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO fee_enquiries 
+                            (enquiry_id, full_name, company_name, email, contact_number, description, ip_address, status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            enquiry_id,
+                            data['fullName'],
+                            data['companyName'],
+                            data['email'],
+                            data['contactNumber'],
+                            data['description'],
+                            request.remote_addr,
+                            'pending'
+                        ))
+                        conn.commit()
+                        db_success = True
+                        print(f"✅ Database insert successful: {enquiry_id}")
+            else:
+                print("⚠️ No database pool available")
+        except Exception as e:
+            print(f"❌ Database insert error: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # STEP 2: Send email
+        try:
+            send_fee_enquiry_email(data, enquiry_id)
+        except Exception as e:
+            print(f"❌ Email error (continuing anyway): {e}")
+        
+        # STEP 3: Log to Google Sheets
+        try:
+            sheet_data = {
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'enquiry_id': enquiry_id,
+                'full_name': data['fullName'],
+                'company_name': data['companyName'],
+                'email': data['email'],
+                'contact_number': data['contactNumber'],
+                'description': data['description'],
+                'ip_address': request.remote_addr,
+                'status': 'pending'
+            }
             append_to_google_sheet("Fee_Enquiries", sheet_data)
-            return jsonify({"success": True, "message": "Fee enquiry submitted successfully", "enquiryId": enquiry_id})
+        except Exception as e:
+            print(f"⚠️ Google Sheets error: {e}")
+        
+        if db_success:
+            return jsonify({
+                "success": True, 
+                "message": "Fee enquiry submitted successfully", 
+                "enquiryId": enquiry_id
+            })
         else:
-            return jsonify({"success": False, "error": "Failed to send email. Please try again."}), 500
+            return jsonify({
+                "success": False, 
+                "error": "Database error - please try again"
+            }), 500
+            
     except Exception as e:
-        print(f"Fee Enquiry Error: {str(e)}")
+        print(f"❌ Fee Enquiry Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
-    finally:
-        if conn:
-            release_db_connection(conn)
+
+@app.route("/request-download", methods=["POST"])
+def request_download():
+    """Step 1: Validate form, log to DB, return download token"""
+    try:
+        data = request.json
+        print(f"📥 Received download request: {data}")
+        
+        if not data:
+            return jsonify({"success": False, "error": "No data provided"}), 400
+        
+        required_fields = ['fullName', 'companyName', 'email', 'contactNumber', 'state', 'actType']
+        for field in required_fields:
+            if not data.get(field):
+                print(f"❌ Missing field: {field}")
+                return jsonify({"success": False, "error": f"Missing field: {field}"}), 400
+        
+        # Set defaults
+        if 'designation' not in data:
+            data['designation'] = 'Not Provided'
+        if 'rating' not in data:
+            data['rating'] = 0
+        
+        download_token = f"DL{secrets.token_hex(8)}"
+        ip_address = request.remote_addr
+        user_agent = request.headers.get('User-Agent')
+        
+        # Log to database
+        download_id = None
+        try:
+            pool = get_db_pool()
+            if pool:
+                with pool.connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO downloads 
+                            (full_name, company_name, email, contact_number, designation, rating, state, act_type, ip_address, user_agent)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            RETURNING id
+                        """, (
+                            data['fullName'], 
+                            data['companyName'], 
+                            data['email'], 
+                            data['contactNumber'], 
+                            data.get('designation', 'Not Provided'),
+                            int(data.get('rating', 0)),
+                            data['state'], 
+                            data['actType'], 
+                            ip_address, 
+                            user_agent
+                        ))
+                        download_id = cur.fetchone()[0]
+                        
+                        # Update stats
+                        cur.execute("""
+                            INSERT INTO download_stats (state, act_type, download_count, last_download)
+                            VALUES (%s, %s, 1, CURRENT_TIMESTAMP)
+                            ON CONFLICT(state, act_type) DO UPDATE 
+                            SET download_count = download_stats.download_count + 1, 
+                                last_download = CURRENT_TIMESTAMP
+                        """, (data['state'], data['actType']))
+                        
+                        conn.commit()
+                        print(f"✅ Download logged: ID {download_id}")
+        except Exception as e:
+            print(f"❌ Download logging error: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Store in pending even if DB failed (for PDF generation)
+        with pending_lock:
+            pending_downloads[download_token] = {
+                'data': data, 
+                'download_id': download_id, 
+                'created_at': datetime.now(), 
+                'ip': ip_address
+            }
+        
+        if download_id:
+            return jsonify({
+                "success": True, 
+                "downloadId": download_id, 
+                "downloadToken": download_token, 
+                "message": "Form submitted successfully"
+            })
+        else:
+            return jsonify({
+                "success": False, 
+                "error": "Database error - please try again"
+            }), 500
+        
+    except Exception as e:
+        print(f"❌ Download Request Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# Add this endpoint to check database status
+@app.route("/db-status", methods=["GET"])
+def db_status():
+    """Check database connection and show recent entries"""
+    try:
+        pool = get_db_pool()
+        if not pool:
+            return jsonify({
+                "status": "error",
+                "message": "No database pool"
+            }), 500
+        
+        result = {
+            "status": "connected",
+            "database": DB_NAME,
+            "host": DB_HOST,
+            "tables": {},
+            "recent_entries": {}
+        }
+        
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                # Get all tables
+                cur.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                """)
+                tables = [t[0] for t in cur.fetchall()]
+                result["tables"]["list"] = tables
+                
+                # Get counts
+                for table in ['downloads', 'service_enquiries', 'fee_enquiries', 'download_stats']:
+                    if table in tables:
+                        cur.execute(f"SELECT COUNT(*) FROM {table}")
+                        count = cur.fetchone()[0]
+                        result["tables"][f"{table}_count"] = count
+                        
+                        # Get recent entries (last 5)
+                        cur.execute(f"""
+                            SELECT * FROM {table} 
+                            ORDER BY id DESC 
+                            LIMIT 5
+                        """)
+                        columns = [desc[0] for desc in cur.description]
+                        rows = cur.fetchall()
+                        
+                        recent = []
+                        for row in rows:
+                            row_dict = {}
+                            for i, col in enumerate(columns):
+                                value = row[i]
+                                # Convert datetime to string
+                                if hasattr(value, 'isoformat'):
+                                    value = value.isoformat()
+                                row_dict[col] = str(value) if value is not None else None
+                            recent.append(row_dict)
+                        
+                        result["recent_entries"][table] = recent
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 @app.route("/download/<state>/<act_type>")
 def download_data(state, act_type):
