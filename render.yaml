@@ -2,17 +2,22 @@ services:
   - type: web
     name: slci-chatbot
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    # ✅ FIXED: Build command with setuptools upgrade
+    buildCommand: |
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+    # ✅ FIXED: Start command with proper gunicorn flags
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
     envVars:
+      # ✅ FIXED: Use "3.9" not "3.9.0" (Render doesn't support patch versions)
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: "3.9"
       - key: SECRET_KEY
         generateValue: true
       - key: DB_HOST
         sync: false
       - key: DB_PORT
-        value: 5432
+        value: "5432"
       - key: DB_NAME
         sync: false
       - key: DB_USER
@@ -26,7 +31,7 @@ services:
       - key: EMAIL_HOST
         value: smtp.gmail.com
       - key: EMAIL_PORT
-        value: 587
+        value: "587"
       - key: EMAIL_USER
         sync: false
       - key: EMAIL_PASSWORD
@@ -34,4 +39,4 @@ services:
       - key: GOOGLE_SHEET_ID
         sync: false
       - key: GOOGLE_SHEET_ENABLED
-        value: true
+        value: "true"
