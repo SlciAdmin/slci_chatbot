@@ -93,72 +93,175 @@ GOOGLE_SHEET_ENABLED = os.getenv('GOOGLE_SHEET_ENABLED', 'true').lower() == 'tru
 db_pool = None
 
 def get_db_pool():
-    """Get database connection pool - supports both individual params and DATABASE_URL"""
+    """Get database connection pool - SIMPLIFIED VERSION"""
     global db_pool
     if db_pool is None:
         try:
-            # Check if DATABASE_URL is provided (Render's preferred method)
+            # Get database URL from environment
             database_url = os.getenv('DATABASE_URL')
             
-            if database_url:
-                # Fix: Render's DATABASE_URL might start with postgres:// but psycopg 3 needs postgresql://
+            if not database_url:
+                # Construct from individual params if DATABASE_URL not set
+                database_url = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+            else:
+                # Fix postgres:// vs postgresql://
                 if database_url.startswith('postgres://'):
                     database_url = database_url.replace('postgres://', 'postgresql://', 1)
                 
-                # Add SSL requirement for Render
-                if '?' in database_url:
-                    database_url += '&sslmode=require'
-                else:
-                    database_url += '?sslmode=require'
-                
-                conninfo = database_url
-                print(f"✅ Using DATABASE_URL connection")
-            else:
-                # Fall back to individual parameters
-                conninfo = f"host={DB_HOST} port={DB_PORT} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} sslmode=require"
+                # Add sslmode if not present
+                if 'sslmode' not in database_url:
+                    if '?' in database_url:
+                        database_url += '&sslmode=require'
+                    else:
+                        database_url += '?sslmode=require'
             
             print(f"🔌 Connecting to database...")
+            print(f"📊 Database: {DB_NAME} on {DB_HOST}")
             
+            # Create connection pool
             db_pool = ConnectionPool(
-                conninfo=conninfo,
+                conninfo=database_url,
                 min_size=1,
-                max_size=10,
+                max_size=5,
                 open=True,
-                timeout=30
+                timeout=30,
+                max_waiting=3,
+                max_lifetime=600
             )
-            print("✅ Database pool created successfully")
             
-            # Test the connection
-            test_conn = db_pool.getconn()
-            with test_conn.cursor() as cursor:
-                cursor.execute("SELECT 1")
-                result = cursor.fetchone()
-                print(f"✅ Database connection test: {result}")
-            db_pool.putconn(test_conn)
+            # Test connection immediately
+            with db_pool.connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    result = cur.fetchone()
+                    print(f"✅ Database connection test: {result}")
+            
+            print("✅ Database pool created successfully")
             
         except Exception as e:
             print(f"❌ Database pool creation failed: {e}")
-            print("\n📋 Troubleshooting Tips:")
-            print("   1. Check if database is in 'available' status on Render")
-            print("   2. Verify 0.0.0.0/0 is added in Networking section")
-            print("   3. Confirm password is copied correctly")
-            print("   4. Check if database is expired (free tier expires after 90 days)")
+            print(f"   URL format: {database_url[:50]}...")
             return None
+    
     return db_pool
 
+def init_db():
+    """Create all tables if they don't exist"""
+    conn = None
+    try:
+        print("📊 Initializing database tables...")
+        
+        pool = get_db_pool()
+        if not pool:
+            print("❌ Cannot initialize DB - no connection pool")
+            return False
+        
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                # Create downloads table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS downloads (
+                        id SERIAL PRIMARY KEY,
+                        full_name TEXT NOT NULL,
+                        company_name TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        contact_number TEXT NOT NULL,
+                        designation TEXT NOT NULL,
+                        rating INTEGER NOT NULL,
+                        state TEXT NOT NULL,
+                        act_type TEXT NOT NULL,
+                        ip_address TEXT,
+                        user_agent TEXT,
+                        download_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        pdf_generated BOOLEAN DEFAULT FALSE,
+                        pdf_path TEXT
+                    )
+                """)
+                
+                # Create service enquiries table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS service_enquiries (
+                        id SERIAL PRIMARY KEY,
+                        enquiry_id TEXT UNIQUE NOT NULL,
+                        full_name TEXT NOT NULL,
+                        company_name TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        contact_number TEXT NOT NULL,
+                        service TEXT NOT NULL,
+                        query TEXT NOT NULL,
+                        ip_address TEXT,
+                        status TEXT DEFAULT 'pending',
+                        submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        email_sent BOOLEAN DEFAULT TRUE,
+                        notes TEXT
+                    )
+                """)
+                
+                # Create fee enquiries table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS fee_enquiries (
+                        id SERIAL PRIMARY KEY,
+                        enquiry_id TEXT UNIQUE NOT NULL,
+                        full_name TEXT NOT NULL,
+                        company_name TEXT NOT NULL,
+                        email TEXT NOT NULL,
+                        contact_number TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        ip_address TEXT,
+                        status TEXT DEFAULT 'pending',
+                        submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        email_sent BOOLEAN DEFAULT TRUE,
+                        notes TEXT
+                    )
+                """)
+                
+                # Create download stats table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS download_stats (
+                        id SERIAL PRIMARY KEY,
+                        state TEXT NOT NULL,
+                        act_type TEXT NOT NULL,
+                        download_count INTEGER DEFAULT 0,
+                        last_download TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(state, act_type)
+                    )
+                """)
+                
+                # Create indexes
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_downloads_email ON downloads(email)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_downloads_date ON downloads(download_date)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_enquiries_email ON service_enquiries(email)")
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_fee_enquiries_email ON fee_enquiries(email)")
+                
+                conn.commit()
+                
+                # Verify tables were created
+                cur.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                """)
+                tables = cur.fetchall()
+                print(f"✅ Tables in database: {[t[0] for t in tables]}")
+                
+        print("✅ Database tables initialized successfully")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+        if conn:
+            conn.rollback()
+        return False
+
 def get_db_connection():
-    """Get database connection from pool with error handling"""
+    """Get database connection"""
     try:
         pool = get_db_pool()
         if pool:
-            conn = pool.getconn()
-            # Set session parameters
-            with conn.cursor() as cursor:
-                cursor.execute("SET timezone TO 'Asia/Kolkata'")
-            return conn
+            return pool.getconn()
         return None
     except Exception as e:
-        print(f"❌ Database connection error: {str(e)}")
+        print(f"❌ Connection error: {e}")
         return None
 
 def release_db_connection(conn):
@@ -167,160 +270,7 @@ def release_db_connection(conn):
         try:
             db_pool.putconn(conn)
         except Exception as e:
-            print(f"⚠️ Error releasing connection: {str(e)}")
-
-def init_db():
-    """Initialize database tables with better error handling"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            print("⚠️ Skipping DB initialization - no connection")
-            return
-        
-        with conn.cursor() as cursor:
-            # Create downloads table
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS downloads (
-                id SERIAL PRIMARY KEY,
-                full_name TEXT NOT NULL,
-                company_name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                contact_number TEXT NOT NULL,
-                designation TEXT NOT NULL,
-                rating INTEGER NOT NULL,
-                state TEXT NOT NULL,
-                act_type TEXT NOT NULL,
-                ip_address TEXT,
-                user_agent TEXT,
-                download_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                pdf_generated BOOLEAN DEFAULT FALSE,
-                pdf_path TEXT,
-                UNIQUE(email, state, act_type, download_date)
-            )
-            ''')
-            
-            # Create service enquiries table
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS service_enquiries (
-                id SERIAL PRIMARY KEY,
-                enquiry_id TEXT UNIQUE NOT NULL,
-                full_name TEXT NOT NULL,
-                company_name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                contact_number TEXT NOT NULL,
-                service TEXT NOT NULL,
-                query TEXT NOT NULL,
-                ip_address TEXT,
-                status TEXT DEFAULT 'pending',
-                submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                email_sent BOOLEAN DEFAULT TRUE,
-                notes TEXT
-            )
-            ''')
-            
-            # Create fee enquiries table
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS fee_enquiries (
-                id SERIAL PRIMARY KEY,
-                enquiry_id TEXT UNIQUE NOT NULL,
-                full_name TEXT NOT NULL,
-                company_name TEXT NOT NULL,
-                email TEXT NOT NULL,
-                contact_number TEXT NOT NULL,
-                description TEXT NOT NULL,
-                ip_address TEXT,
-                status TEXT DEFAULT 'pending',
-                submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                email_sent BOOLEAN DEFAULT TRUE,
-                notes TEXT
-            )
-            ''')
-            
-            # Create indexes
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_email ON downloads(email)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_date ON downloads(download_date)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_email ON service_enquiries(email)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_fee_enquiries_email ON fee_enquiries(email)')
-            
-            # Create statistics table
-            cursor.execute('''
-            CREATE TABLE IF NOT EXISTS download_stats (
-                id SERIAL PRIMARY KEY,
-                state TEXT NOT NULL,
-                act_type TEXT NOT NULL,
-                download_count INTEGER DEFAULT 0,
-                last_download TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE(state, act_type)
-            )
-            ''')
-            
-            conn.commit()
-            print("✅ Database tables initialized successfully")
-            
-            # Show table count
-            cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
-            table_count = cursor.fetchone()[0]
-            print(f"📊 Total tables in database: {table_count}")
-            
-    except Exception as e:
-        print(f"❌ Database initialization error: {str(e)}")
-        if conn:
-            conn.rollback()
-    finally:
-        if conn:
-            release_db_connection(conn)
-
-# Add a health check endpoint for database
-@app.route("/db-health", methods=["GET"])
-def db_health():
-    """Check database connection status"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({
-                "status": "error",
-                "message": "Could not connect to database",
-                "db_host": DB_HOST,
-                "db_name": DB_NAME
-            }), 500
-        
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT current_database(), current_user, version()")
-            db_name, db_user, version = cursor.fetchone()
-            
-            # Get table counts
-            cursor.execute("SELECT COUNT(*) FROM downloads")
-            downloads_count = cursor.fetchone()[0]
-            
-            cursor.execute("SELECT COUNT(*) FROM service_enquiries")
-            service_count = cursor.fetchone()[0]
-            
-            cursor.execute("SELECT COUNT(*) FROM fee_enquiries")
-            fee_count = cursor.fetchone()[0]
-        
-        return jsonify({
-            "status": "healthy",
-            "database": db_name,
-            "user": db_user,
-            "version": version.split(',')[0],
-            "tables": {
-                "downloads": downloads_count,
-                "service_enquiries": service_count,
-                "fee_enquiries": fee_count
-            },
-            "connection": "DATABASE_URL" if os.getenv('DATABASE_URL') else "individual parameters"
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-    finally:
-        if conn:
-            release_db_connection(conn)
-
+            print(f"⚠️ Error releasing connection: {e}")
 # ============================================================================
 # GOOGLE SHEETS CONNECTION - PRODUCTION READY (gspread 5.x compatible)
 # ============================================================================
@@ -512,56 +462,53 @@ def debug_sheets():
 # DATABASE LOGGING FUNCTIONS - WITH GOOGLE SHEETS INTEGRATION
 # ============================================================================
 def log_download_request(data, ip_address, user_agent):
-    """Log download to DB AND Google Sheets - psycopg 3.x compatible"""
+    """Log download to database"""
     conn = None
     try:
-        conn = get_db_connection()
-        if not conn:
+        pool = get_db_pool()
+        if not pool:
+            print("⚠️ No database pool available")
             return None
-        with conn.cursor() as cursor:
-            cursor.execute('''
-            INSERT INTO downloads (full_name, company_name, email, contact_number, designation, rating, state, act_type, ip_address, user_agent)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (data['fullName'], data['companyName'], data['email'], data['contactNumber'], data['designation'], int(data['rating']), data['state'], data['actType'], ip_address, user_agent))
-            cursor.execute('''
-            INSERT INTO download_stats (state, act_type, download_count, last_download)
-            VALUES (%s, %s, 1, CURRENT_TIMESTAMP)
-            ON CONFLICT(state, act_type) DO UPDATE SET download_count = download_stats.download_count + 1, last_download = CURRENT_TIMESTAMP
-            ''', (data['state'], data['actType']))
-            conn.commit()
-            download_id = cursor.lastrowid if hasattr(cursor, 'lastrowid') else None
-        try:
-            sheet_data = {
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'full_name': data['fullName'],
-                'company_name': data['companyName'],
-                'email': data['email'],
-                'contact_number': data['contactNumber'],
-                'designation': data['designation'],
-                'rating': str(data['rating']),
-                'state': data['state'],
-                'act_type': data['actType'],
-                'ip_address': ip_address,
-                'download_id': str(download_id) if download_id else ''
-            }
-            from threading import Thread
-            Thread(target=append_to_google_sheet, args=("Downloads", sheet_data), daemon=True).start()
-        except Exception as e:
-            print(f"⚠️ Google Sheets logging failed (non-critical): {e}")
-        return download_id
-    except psycopg.errors.UniqueViolation as e:
-        print(f"Warning: Duplicate download request from {data['email']}")
-        if conn:
-            conn.rollback()
-        return None
+        
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO downloads 
+                    (full_name, company_name, email, contact_number, designation, rating, state, act_type, ip_address, user_agent)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    data['fullName'], 
+                    data['companyName'], 
+                    data['email'], 
+                    data['contactNumber'], 
+                    data.get('designation', 'Not Provided'),
+                    int(data.get('rating', 0)),
+                    data['state'], 
+                    data['actType'], 
+                    ip_address, 
+                    user_agent
+                ))
+                download_id = cur.fetchone()[0]
+                
+                # Update stats
+                cur.execute("""
+                    INSERT INTO download_stats (state, act_type, download_count, last_download)
+                    VALUES (%s, %s, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT(state, act_type) DO UPDATE 
+                    SET download_count = download_stats.download_count + 1, 
+                        last_download = CURRENT_TIMESTAMP
+                """, (data['state'], data['actType']))
+                
+                conn.commit()
+                print(f"✅ Download logged: ID {download_id}")
+                return download_id
+                
     except Exception as e:
-        print(f"Database error: {str(e)}")
+        print(f"❌ Download logging error: {e}")
         if conn:
             conn.rollback()
         return None
-    finally:
-        if conn:
-            release_db_connection(conn)
 
 def get_download_statistics():
     """Get download statistics - psycopg 3.x compatible"""
@@ -1757,27 +1704,111 @@ def sanitize_input(text):
     return text.strip()
 
 # ============================================================================
-# APPLICATION ENTRY POINT
+# HEALTH CHECK ENDPOINT (Add this BEFORE the startup code)
+# ============================================================================
+@app.route("/db-check", methods=["GET"])
+def db_check():
+    """Simple database check endpoint"""
+    try:
+        pool = get_db_pool()
+        if not pool:
+            return jsonify({"status": "error", "message": "No database pool"}), 500
+        
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                # Check if tables exist
+                cur.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                """)
+                tables = [t[0] for t in cur.fetchall()]
+                
+                # Get counts
+                counts = {}
+                for table in ['downloads', 'service_enquiries', 'fee_enquiries', 'download_stats']:
+                    if table in tables:
+                        cur.execute(f"SELECT COUNT(*) FROM {table}")
+                        counts[table] = cur.fetchone()[0]
+                    else:
+                        counts[table] = 0
+                
+                return jsonify({
+                    "status": "healthy" if tables else "no_tables",
+                    "database": DB_NAME,
+                    "host": DB_HOST,
+                    "tables": tables,
+                    "counts": counts
+                })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+# ============================================================================
+# APPLICATION STARTUP - THIS RUNS ON BOTH RENDER AND LOCAL
+# ============================================================================
+
+# This runs when the module is imported (on Render with gunicorn)
+print("=" * 60)
+print("🚀 SLCI Chatbot Initializing...")
+print("=" * 60)
+print(f"📅 Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"🐍 Python Version: {sys.version}")
+print(f"🌍 Environment: {'Render' if os.environ.get('RENDER') else 'Local'}")
+print("=" * 60)
+
+# Initialize database immediately on module load (works on Render)
+try:
+    print("📊 Initializing database...")
+    db_result = init_db()
+    if db_result:
+        print("✅ Database initialized successfully")
+    else:
+        print("⚠️ Database initialization returned False")
+except Exception as e:
+    print(f"❌ Database initialization error: {e}")
+    import traceback
+    traceback.print_exc()
+
+# Check Ollama connection
+try:
+    if check_ollama_connection():
+        print(f"✅ Ollama connected: {OLLAMA_MODEL}")
+    else:
+        print("⚠️ Ollama not available - using keyword responses")
+except Exception as e:
+    print(f"⚠️ Ollama check failed: {e}")
+
+# Check Google Sheets
+if GOOGLE_SHEET_ENABLED:
+    print(f"✅ Google Sheets enabled: {GOOGLE_SHEET_ID}")
+    if os.path.exists(GOOGLE_CREDENTIALS_PATH):
+        print(f"✅ Credentials found: {GOOGLE_CREDENTIALS_PATH}")
+    else:
+        print(f"⚠️ Credentials file missing: {GOOGLE_CREDENTIALS_PATH}")
+else:
+    print("ℹ️ Google Sheets disabled")
+
+print("=" * 60)
+print("✅ Initialization complete! Ready to handle requests.")
+print("=" * 60)
+
+# ============================================================================
+# MAIN ENTRY POINT - This runs ONLY when executing python app.py directly
 # ============================================================================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     debug_mode = os.environ.get("FLASK_ENV") == "development"
     
-    # Initialize database
-    init_db()
+    print("\n" + "=" * 60)
+    print("🚀 Starting Flask Development Server")
+    print("=" * 60)
+    print(f"📍 Port: {port}")
+    print(f"🔧 Debug Mode: {debug_mode}")
+    print(f"🌐 URL: http://0.0.0.0:{port}")
+    print("=" * 60 + "\n")
     
-    # Check services
-    if check_ollama_connection():
-        print(f"✅ Connected to Ollama: {OLLAMA_MODEL}")
-    else:
-        print("⚠️ Ollama not available - using keyword responses")
-    
-    if GOOGLE_SHEET_ENABLED:
-        print(f"✅ Google Sheets enabled: {GOOGLE_SHEET_ID}")
-        if os.path.exists(GOOGLE_CREDENTIALS_PATH):
-            print(f"✅ Credentials found: {GOOGLE_CREDENTIALS_PATH}")
-        else:
-            print(f"⚠️ Credentials file missing: {GOOGLE_CREDENTIALS_PATH}")
-    
-    print(f"🚀 Starting Flask server on port {port} (Python {sys.version})")
+    # Run the app
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
