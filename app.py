@@ -90,35 +90,34 @@ GOOGLE_SHEET_ENABLED = os.getenv('GOOGLE_SHEET_ENABLED', 'true').lower() == 'tru
 # ============================================================================
 # DATABASE CONNECTION POOL (psycopg 3.x compatible) - ENHANCED FOR RENDER
 # ============================================================================
-db_pool = None
-
 def get_db_pool():
-    """Get database connection pool - SIMPLIFIED VERSION"""
+    """Get database connection pool - FIXED for Render"""
     global db_pool
     if db_pool is None:
         try:
-            # Get database URL from environment
+            # Try DATABASE_URL first
             database_url = os.getenv('DATABASE_URL')
             
-            if not database_url:
-                # Construct from individual params if DATABASE_URL not set
-                database_url = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
-            else:
+            if database_url:
                 # Fix postgres:// vs postgresql://
                 if database_url.startswith('postgres://'):
                     database_url = database_url.replace('postgres://', 'postgresql://', 1)
                 
-                # Add sslmode if not present
+                # Ensure sslmode is set
                 if 'sslmode' not in database_url:
-                    if '?' in database_url:
-                        database_url += '&sslmode=require'
-                    else:
-                        database_url += '?sslmode=require'
+                    separator = '&' if '?' in database_url else '?'
+                    database_url += f"{separator}sslmode=require"
+            else:
+                # Build from individual params
+                database_url = (
+                    f"postgresql://{DB_USER}:{DB_PASSWORD}@"
+                    f"{DB_HOST}:{DB_PORT}/{DB_NAME}"
+                    f"?sslmode=require"
+                )
             
-            print(f"🔌 Connecting to database...")
-            print(f"📊 Database: {DB_NAME} on {DB_HOST}")
+            print(f"🔌 Connecting to: {database_url[:50]}...")
             
-            # Create connection pool
+            # Create pool with proper settings for Render
             db_pool = ConnectionPool(
                 conninfo=database_url,
                 min_size=1,
@@ -126,21 +125,25 @@ def get_db_pool():
                 open=True,
                 timeout=30,
                 max_waiting=3,
-                max_lifetime=600
+                max_lifetime=600,
+                kwargs={
+                    'sslmode': 'require',
+                    'sslrootcert': None
+                }
             )
             
-            # Test connection immediately
+            # Test immediately
             with db_pool.connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1")
-                    result = cur.fetchone()
-                    print(f"✅ Database connection test: {result}")
+                    print("✅ Database connection successful!")
             
-            print("✅ Database pool created successfully")
+            return db_pool
             
         except Exception as e:
             print(f"❌ Database pool creation failed: {e}")
-            print(f"   URL format: {database_url[:50]}...")
+            import traceback
+            traceback.print_exc()
             return None
     
     return db_pool
@@ -869,6 +872,57 @@ def fetch_holiday_list(state):
         print(f"Holiday Fetch Error: {e}")
         return None
 
+
+@app.route("/test-db-connection", methods=["GET"])
+def test_db_connection():
+    """Test database connection"""
+    try:
+        print("🔍 Testing database connection...")
+        print(f"DB_HOST: {DB_HOST}")
+        print(f"DB_NAME: {DB_NAME}")
+        print(f"DB_USER: {DB_USER}")
+        
+        pool = get_db_pool()
+        if not pool:
+            return jsonify({"status": "error", "message": "No connection pool"})
+        
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                # Test basic query
+                cur.execute("SELECT 1")
+                result = cur.fetchone()
+                
+                # Check tables
+                cur.execute("""
+                    SELECT table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                """)
+                tables = [t[0] for t in cur.fetchall()]
+                
+                # Check recent service_enquiries
+                cur.execute("""
+                    SELECT COUNT(*) FROM service_enquiries
+                """)
+                count = cur.fetchone()[0]
+                
+                return jsonify({
+                    "status": "success",
+                    "connection": "OK",
+                    "test_result": result,
+                    "tables": tables,
+                    "service_enquiries_count": count,
+                    "database": DB_NAME,
+                    "host": DB_HOST
+                })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
 def fetch_working_hours(state):
     try:
         url = STATE_WORKING_HOURS_URLS.get(state)
@@ -1266,6 +1320,42 @@ def generate_enquiry_id(prefix="ENQ"):
     random_part = secrets.token_hex(3).upper()
     return f"{prefix}-{date_part}-{random_part}"
 
+@app.route("/check-recent-data", methods=["GET"])
+def check_recent_data():
+    """Check recent data in all tables"""
+    try:
+        pool = get_db_pool()
+        result = {}
+        
+        with pool.connection() as conn:
+            with conn.cursor() as cur:
+                # Check service_enquiries
+                cur.execute("""
+                    SELECT id, enquiry_id, full_name, email, submission_date 
+                    FROM service_enquiries 
+                    ORDER BY id DESC 
+                    LIMIT 5
+                """)
+                result['service_enquiries'] = [
+                    {"id": r[0], "enquiry_id": r[1], "name": r[2], "email": r[3], "time": str(r[4])}
+                    for r in cur.fetchall()
+                ]
+                
+                # Check fee_enquiries
+                cur.execute("""
+                    SELECT id, enquiry_id, full_name, email, submission_date 
+                    FROM fee_enquiries 
+                    ORDER BY id DESC 
+                    LIMIT 5
+                """)
+                result['fee_enquiries'] = [
+                    {"id": r[0], "enquiry_id": r[1], "name": r[2], "email": r[3], "time": str(r[4])}
+                    for r in cur.fetchall()
+                ]
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # ============================================================================
 # FIXED ENQUIRY ROUTES - Database First, Email Second
 # ============================================================================
