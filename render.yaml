@@ -2,15 +2,20 @@ services:
 - type: web
   name: slci-chatbot
   env: python
-  # ✅ CRITICAL: Use Python 3.10 (stable & compatible)
+  plan: free
   buildCommand: |
+    # Force Python 3.10
+    python --version
     pip install --upgrade pip setuptools wheel
     pip install -r requirements.txt
+    python --version  # Verify version after build
   startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
   envVars:
-    # ✅ MUST BE 3.10 or 3.11 (NOT 3.14)
+    # CRITICAL: Set Python version in multiple places
     - key: PYTHON_VERSION
-      value: "3.10"
+      value: "3.10.11"
+    - key: PIP_DEFAULT_TIMEOUT
+      value: "100"
     - key: SECRET_KEY
       generateValue: true
     - key: DB_HOST

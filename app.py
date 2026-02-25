@@ -2,9 +2,18 @@
 import sys
 import os
 
+if sys.version_info < (3, 10) or sys.version_info >= (3, 11):
+    print(f"⚠️ WARNING: This app is designed for Python 3.10.x")
+    print(f"⚠️ Current Python version: {sys.version}")
+    print(f"⚠️ You may experience compatibility issues")
+    # Don't exit, but warn clearly
+else:
+    print(f"✅ Python version OK: {sys.version}")
+
 # Load environment variables FIRST
 from dotenv import load_dotenv
 load_dotenv()
+
 
 from flask import Flask, render_template, request, jsonify, send_file
 import requests
