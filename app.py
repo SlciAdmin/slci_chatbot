@@ -1,13 +1,17 @@
+# ✅ ADD AT TOP OF app.py (before psycopg2 import)
+import sys
+import os
+
+# Load environment variables FIRST
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, render_template, request, jsonify, send_file
 import requests
-from dotenv import load_dotenv
 from bs4 import BeautifulSoup
-import os
 import re
 from datetime import datetime
 import io
-import psycopg2
-from psycopg2 import pool
 import json
 import hashlib
 import hmac
@@ -17,6 +21,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import secrets
 import time
+from threading import Lock
+
+# ✅ psycopg2 import AFTER dotenv loaded
+import psycopg2
+from psycopg2 import pool
+
+# ✅ reportlab imports
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
@@ -25,9 +36,10 @@ from reportlab.lib.units import inch, cm, mm
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+
+# ✅ Google Sheets imports
 import gspread
 from google.oauth2.service_account import Credentials
-from threading import Lock
 
 load_dotenv()
 app = Flask(__name__)
@@ -308,27 +320,36 @@ def debug_sheets():
 # ============================================================================
 # DATABASE CONNECTION POOL
 # ============================================================================
+# ✅ ADD ERROR HANDLING FOR DATABASE CONNECTION
 db_pool = None
 
 def get_db_pool():
-    """Get database connection pool"""
+    """Get database connection pool with error handling"""
     global db_pool
     if db_pool is None:
-        db_pool = pool.SimpleConnectionPool(
-            1, 10,
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD
-        )
+        try:
+            db_pool = pool.SimpleConnectionPool(
+                1, 10,
+                host=DB_HOST,
+                port=DB_PORT,
+                dbname=DB_NAME,
+                user=DB_USER,
+                password=DB_PASSWORD
+            )
+            print("✅ Database pool created successfully")
+        except Exception as e:
+            print(f"⚠️ Database pool creation failed: {e}")
+            print("⚠️ App will run without database (check DB credentials)")
+            return None
     return db_pool
 
 def get_db_connection():
-    """Get database connection from pool"""
+    """Get database connection from pool with error handling"""
     try:
-        pool = get_db_pool()
-        return pool.getconn()
+        pool_obj = get_db_pool()
+        if pool_obj:
+            return pool_obj.getconn()
+        return None
     except Exception as e:
         print(f"Database connection error: {str(e)}")
         return None
@@ -342,12 +363,12 @@ def release_db_connection(conn):
             print(f"Error releasing connection: {str(e)}")
 
 def init_db():
-    """Initialize database tables"""
+    """Initialize database tables with error handling"""
     conn = None
     try:
         conn = get_db_connection()
         if not conn:
-            print("Failed to get database connection")
+            print("⚠️ Skipping DB initialization - no connection")
             return
         cursor = conn.cursor()
         
@@ -409,32 +430,11 @@ def init_db():
         )
         ''')
         
-        # Create indexes for faster queries
+        # Create indexes
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_email ON downloads(email)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_date ON downloads(download_date)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_state ON downloads(state)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_act ON downloads(act_type)')
-        
-        # Create indexes for service enquiries
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_email ON service_enquiries(email)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_date ON service_enquiries(submission_date)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_status ON service_enquiries(status)')
-        
-        # Create indexes for fee enquiries
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_fee_enquiries_email ON fee_enquiries(email)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_fee_enquiries_date ON fee_enquiries(submission_date)')
-        
-        # Create statistics table
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS download_stats (
-            id SERIAL PRIMARY KEY,
-            state TEXT NOT NULL,
-            act_type TEXT NOT NULL,
-            download_count INTEGER DEFAULT 0,
-            last_download TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(state, act_type)
-        )
-        ''')
         
         conn.commit()
         print("✅ Database tables initialized successfully")
@@ -2446,31 +2446,23 @@ def get_states(act_type):
 # ============================================================================
 # PRODUCTION ENTRY POINT
 # ============================================================================
+# ============================================================================
+# APPLICATION ENTRY POINT
+# ============================================================================
 if __name__ == "__main__":
-    # Check if running in development vs production
-    import os
     port = int(os.environ.get("PORT", 5000))
     debug_mode = os.environ.get("FLASK_ENV") == "development"
     
-    # Initialize database
+    # ✅ Initialize database (with error handling)
     init_db()
     
-    # Check Ollama status (for development)
-    if check_ollama_connection():
-        print(f"✅ Connected to Ollama with model: {OLLAMA_MODEL}")
-    else:
-        print("⚠️  Ollama not running. Using keyword-based responses only.")
-    
-    print(f"✅ Database initialized: PostgreSQL ({DB_NAME})")
-    print(f"✅ Company: {COMPANY_NAME}")
-    
-    # Check Google Sheets in production
+    # ✅ Check Google Sheets in production
     if GOOGLE_SHEET_ENABLED:
         print(f"✅ Google Sheets enabled: {GOOGLE_SHEET_ID}")
         if os.path.exists(GOOGLE_CREDENTIALS_PATH):
             print(f"✅ Credentials found: {GOOGLE_CREDENTIALS_PATH}")
         else:
-            print(f"⚠️  Credentials file missing: {GOOGLE_CREDENTIALS_PATH}")
+            print(f"⚠️ Credentials file missing: {GOOGLE_CREDENTIALS_PATH}")
     
     print(f"🚀 Starting Flask server on port {port}")
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
