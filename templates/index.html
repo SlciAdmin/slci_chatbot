@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLCI Chatbot - Legal Compliance Assistant</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="header-content">
+                <i class="fas fa-balance-scale"></i>
+                <div class="header-text">
+                    <h3>SLCI Assistant</h3>
+                    <p>Shakti Legal Compliance India</p>
+                </div>
+            </div>
+            <div class="ai-badge" id="ollama-status">
+                <i class="fas fa-circle" style="color: #ff4444; font-size: 8px;"></i>
+                <span>Checking...</span>
+            </div>
+        </div>
+        
+        <div id="chat-box" class="chat-box">
+            <div class="bot-message">
+                <div class="message-content">
+                    👋 Hi! I'm SLCI Assistant, your legal compliance expert.
+                </div>
+                <span class="time">Just now</span>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="chat-input">
+                <input type="text" id="user-input" placeholder="Type your question here..." autocomplete="off">
+                <button onclick="sendMessage()" id="send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Download Request Modal -->
+    <div id="downloadModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-pdf" style="color: #dc3545;"></i> Download Request Form</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">Please fill in your details to download the PDF document. Your information helps us serve you better.</p>
+                <form id="downloadForm">
+                    <input type="hidden" id="modalState" name="state">
+                    <input type="hidden" id="modalActType" name="actType">
+                    
+                    <div class="form-group">
+                        <label for="fullName"><i class="fas fa-user"></i> Full Name *</label>
+                        <input type="text" id="fullName" name="fullName" required placeholder="Enter your full name" maxlength="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="companyName"><i class="fas fa-building"></i> Company Name *</label>
+                        <input type="text" id="companyName" name="companyName" required placeholder="Enter your company name" maxlength="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email"><i class="fas fa-envelope"></i> Email Address *</label>
+                        <input type="email" id="email" name="email" required placeholder="Enter your email address" maxlength="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="contactNumber"><i class="fas fa-phone"></i> Contact Number *</label>
+                        <input type="tel" id="contactNumber" name="contactNumber" required placeholder="Enter your 10-digit mobile number" maxlength="15">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="designation"><i class="fas fa-briefcase"></i> Designation *</label>
+                        <select id="designation" name="designation" required>
+                            <option value="">Select your designation</option>
+                            <option value="HR Manager">HR Manager</option>
+                            <option value="HR Executive">HR Executive</option>
+                            <option value="Compliance Officer">Compliance Officer</option>
+                            <option value="Legal Advisor">Legal Advisor</option>
+                            <option value="Business Owner">Business Owner</option>
+                            <option value="Director">Director</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Executive">Executive</option>
+                            <option value="Consultant">Consultant</option>
+                            <option value="Student">Student</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-star"></i> How would you rate our service? *</label>
+                        <div class="rating-container">
+                            <div class="rating-stars">
+                                <i class="far fa-star" data-rating="1"></i>
+                                <i class="far fa-star" data-rating="2"></i>
+                                <i class="far fa-star" data-rating="3"></i>
+                                <i class="far fa-star" data-rating="4"></i>
+                                <i class="far fa-star" data-rating="5"></i>
+                            </div>
+                            <input type="hidden" id="rating" name="rating" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-footer">
+                        <button type="button" class="modal-cancel-btn">Cancel</button>
+                        <button type="submit" class="modal-submit-btn">
+                            <i class="fas fa-download"></i> Download PDF
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+ 
+   
+   <!-- Service Enquiry Modal -->
+<div id="serviceModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-briefcase"></i> Service Enquiry</h3>
+            <span class="close-service-modal">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <form id="serviceForm">
+                <input type="hidden" id="selectedService" name="selectedService">
+
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> Full Name *</label>
+                    <input type="text" id="serviceFullName" name="serviceFullName" required placeholder="Enter your full name" maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-building"></i> Company Name *</label>
+                    <input type="text" id="serviceCompanyName" name="serviceCompanyName" required placeholder="Enter your company name" maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-envelope"></i> Email *</label>
+                    <input type="email" id="serviceEmail" name="serviceEmail" required placeholder="Enter your email address" maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-phone"></i> Contact Number *</label>
+                    <input type="tel" id="serviceContactNumber" name="serviceContactNumber" required placeholder="Enter your 10-digit mobile number" maxlength="15">
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-question-circle"></i> Inquiry *</label>
+                    <textarea id="serviceQuery" name="serviceQuery" required placeholder="Please describe your requirements or questions..." rows="4" minlength="10"></textarea>
+                </div>
+
+                <div class="form-footer">
+                    <button type="button" class="modal-cancel-btn service-cancel-btn">Cancel</button>
+                    <button type="submit" class="modal-submit-btn">
+                        <i class="fas fa-paper-plane"></i> Submit Enquiry
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+    <!-- Fee Enquiry Modal -->
+<div id="feeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-rupee-sign" style="color: #ff9800;"></i> Fee Enquiry Form</h3>
+            <span class="close-fee-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p class="modal-description">Please fill in your details to receive a customized quotation. Our team will contact you within 24 hours.</p>
+            <form id="feeForm">
+                <div class="form-group">
+                    <label for="feeFullName"><i class="fas fa-user"></i> Full Name *</label>
+                    <input type="text" id="feeFullName" name="fullName" required placeholder="Enter your full name" maxlength="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="feeCompanyName"><i class="fas fa-building"></i> Company Name *</label>
+                    <input type="text" id="feeCompanyName" name="companyName" required placeholder="Enter your company name" maxlength="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="feeEmail"><i class="fas fa-envelope"></i> Email Address *</label>
+                    <input type="email" id="feeEmail" name="email" required placeholder="Enter your email address" maxlength="100">
+                </div>
+                
+                <div class="form-group">
+                    <label for="feeContactNumber"><i class="fas fa-phone"></i> Contact Number *</label>
+                    <input type="tel" id="feeContactNumber" name="contactNumber" required placeholder="Enter your 10-digit mobile number" maxlength="15">
+                </div>
+                
+                <div class="form-group">
+                    <label for="feeDescription"><i class="fas fa-edit"></i> Description *</label>
+                    <textarea id="feeDescription" name="description" required placeholder="Please describe your compliance requirements, business size, industry, etc." rows="4"></textarea>
+                </div>
+                
+                <div class="form-footer">
+                    <button type="button" class="modal-cancel-btn fee-cancel-btn">Cancel</button>
+                    <button type="submit" class="modal-submit-btn">
+                        <i class="fas fa-paper-plane"></i> Submit Enquiry
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <p>Processing your request...</p>
+        </div>
+    </div>
+    
+    <!-- Success Message Container -->
+    <div id="successMessageContainer"></div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
