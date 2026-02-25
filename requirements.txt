@@ -3,7 +3,7 @@ pip>=23.0
 setuptools>=65.0.0
 wheel>=0.41.0
 
-# === Core Dependencies ===
+# === Core Dependencies (Python 3.10 Compatible) ===
 flask==2.3.0
 requests==2.31.0
 python-dotenv==1.0.0
@@ -11,10 +11,10 @@ beautifulsoup4==4.12.0
 psycopg2-binary==2.9.9
 reportlab==4.0.0
 
-# === Google Sheets ===
+# === Google Sheets Integration ===
 gspread==5.12.4
 google-auth==2.23.0
 google-auth-oauthlib==1.1.0
 
-# === WSGI Server (Updated for Python 3.9+) ===
+# === WSGI Server (Python 3.10+ Compatible) ===
 gunicorn==21.2.0
