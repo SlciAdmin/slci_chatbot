@@ -12,7 +12,7 @@ services:
   startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
   envVars:
     - key: PYTHON_VERSION
-      value: "3.10.13"
+      value: "3.10"
     - key: PIP_DEFAULT_TIMEOUT
       value: "100"
     - key: SECRET_KEY

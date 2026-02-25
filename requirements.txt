@@ -1,10 +1,10 @@
 # === Build Tools ===
-pip==24.0
-setuptools==69.2.0
-wheel==0.43.0
+pip>=23.0
+setuptools>=65.0.0
+wheel>=0.41.0
 
-# === Core Dependencies ===
-Flask==2.3.3
+# === Core Dependencies (Python 3.10 Compatible) ===
+flask==2.3.3
 requests==2.31.0
 python-dotenv==1.0.0
 beautifulsoup4==4.12.3
@@ -14,33 +14,17 @@ click==8.1.7
 itsdangerous==2.1.2
 blinker==1.7.0
 
-# === Database ===
+# ✅ psycopg2-binary (works with Python 3.10)
 psycopg2-binary==2.9.9
 
-# === PDF Generation - FIXED VERSIONS ===
+# ✅ reportlab + Pillow (use flexible version for Pillow)
 reportlab==4.1.0
-Pillow==10.3.0
-freetype-py==2.4.0
+pillow>=10.0.0,<11.0.0
 
-# === Google Sheets Integration ===
-gspread==6.1.0
-google-auth==2.29.0
-google-auth-oauthlib==1.2.0
-google-auth-httplib2==0.2.0
-cachetools==5.3.3
-rsa==4.9
-pyasn1==0.6.0
-pyasn1-modules==0.4.0
-oauthlib==3.2.2
-requests-oauthlib==2.0.0
+# === Google Sheets ===
+gspread==5.12.4
+google-auth==2.23.0
+google-auth-oauthlib==1.1.0
 
 # === WSGI Server ===
 gunicorn==21.2.0
-
-# === Utility ===
-urllib3==2.2.1
-certifi==2024.2.2
-charset-normalizer==3.3.2
-idna==3.6
-soupsieve==2.5
-MarkupSafe==2.1.5
