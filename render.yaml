@@ -1,45 +1,49 @@
 services:
-- type: web
-  name: slci-chatbot
-  env: python
-  plan: free
-  buildCommand: |
-    # Install system dependencies for Pillow
-    apt-get update && apt-get install -y libjpeg-dev zlib1g-dev libpng-dev libfreetype6-dev
-    # Install Python packages
-    pip install --upgrade pip setuptools wheel
-    pip install -r requirements.txt
-  startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
-  envVars:
-    - key: PYTHON_VERSION
-      value: "3.10"
-    - key: PIP_DEFAULT_TIMEOUT
-      value: "100"
-    - key: SECRET_KEY
-      generateValue: true
-    - key: DB_HOST
-      sync: false
-    - key: DB_PORT
-      value: "5432"
-    - key: DB_NAME
-      sync: false
-    - key: DB_USER
-      sync: false
-    - key: DB_PASSWORD
-      sync: false
-    - key: OLLAMA_HOST
-      value: http://localhost:11434
-    - key: OLLAMA_MODEL
-      value: mistral
-    - key: EMAIL_HOST
-      value: smtp.gmail.com
-    - key: EMAIL_PORT
-      value: "587"
-    - key: EMAIL_USER
-      sync: false
-    - key: EMAIL_PASSWORD
-      sync: false
-    - key: GOOGLE_SHEET_ID
-      sync: false
-    - key: GOOGLE_SHEET_ENABLED
-      value: "true"
+  - type: web
+    name: slci-chatbot
+    env: python
+    plan: free
+    
+    # ✅ CRITICAL: Python version at service level (NOT in envVars)
+    pythonVersion: "3.14"
+    
+    buildCommand: |
+      apt-get update && apt-get install -y \
+        libjpeg-dev zlib1g-dev libpng-dev libfreetype6-dev \
+        build-essential python3-dev
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+      
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
+    
+    envVars:
+      - key: PIP_DEFAULT_TIMEOUT
+        value: "100"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: OLLAMA_HOST
+        value: http://localhost:11434
+      - key: OLLAMA_MODEL
+        value: mistral
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASSWORD
+        sync: false
+      - key: GOOGLE_SHEET_ID
+        sync: false
+      - key: GOOGLE_SHEET_ENABLED
+        value: "true"
