@@ -964,172 +964,105 @@ def get_fast_response(query):
 # ============================================================================
 # EMAIL FUNCTIONS - PRODUCTION READY FOR RENDER + GMAIL
 # ============================================================================
+# ============================================================================
+# EMAIL FUNCTIONS - FIXED FOR RENDER (SMTP_SSL Port 465)
+# ============================================================================
 
 def send_service_enquiry_email(data, enquiry_id):
-    """Send formatted HTML email for service enquiry - Render/Gmail optimized"""
+    """Send formatted HTML email for service enquiry - Render fixed (Port 465)"""
     try:
-        # Load environment variables with defaults
         sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
         sender_password = os.getenv("EMAIL_PASSWORD", "")
         receiver_email = os.getenv("EMAIL_TO", "slciaiagent@gmail.com")
         email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-        email_port = int(os.getenv('EMAIL_PORT', 587))
+        email_port = int(os.getenv('EMAIL_PORT', 465))  # Default to 465
         
-        # 🔍 Debug logging for Render console
-        print(f"📧 [EMAIL] Starting: {sender_email} → {receiver_email}")
-        print(f"📧 [EMAIL] Host: {email_host}:{email_port}")
+        print(f"📧 [EMAIL] Starting: {sender_email} → {receiver_email} via {email_host}:{email_port}")
         print(f"📧 [EMAIL] Password length: {len(sender_password) if sender_password else 0}")
         
-        # Validate credentials
-        if not sender_password:
-            print("❌ [EMAIL] ERROR: EMAIL_PASSWORD is empty!")
-            return False
-        if len(sender_password.strip()) != 16:
-            print(f"❌ [EMAIL] ERROR: Gmail App Password must be 16 chars, got {len(sender_password.strip())}")
+        if not sender_password or len(sender_password.strip()) != 16:
+            print("❌ [EMAIL] Invalid EMAIL_PASSWORD - must be 16-char Gmail App Password")
             return False
         
-        # Build email message
         msg = MIMEMultipart('alternative')
         msg['From'] = sender_email
         msg['To'] = receiver_email
         msg['Subject'] = f"🔧 New Service Enquiry - {data['service']} - ID: {enquiry_id}"
-        msg['Reply-To'] = data['email']  # Allow direct reply to customer
+        msg['Reply-To'] = data['email']
         
-        # HTML body with professional styling
-        html_body = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
-        .container {{ max-width: 650px; margin: 0 auto; padding: 20px; }}
-        .header {{ background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: white; padding: 25px 20px; text-align: center; border-radius: 8px 8px 0 0; }}
-        .header h2 {{ margin: 0; font-size: 22px; }}
-        .content {{ padding: 25px; background: #f9f9f9; border: 1px solid #e0e0e0; border-top: none; }}
-        .field {{ margin: 18px 0; padding: 12px 15px; background: white; border-left: 4px solid #667eea; border-radius: 0 4px 4px 0; }}
-        .label {{ font-weight: 600; color: #1a237e; font-size: 14px; margin-bottom: 4px; }}
-        .value {{ color: #333; font-size: 15px; word-break: break-word; }}
-        .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; background: #f5f5f5; border-radius: 0 0 8px 8px; }}
-        .enquiry-id {{ background: #667eea; color: white; padding: 12px; text-align: center; font-size: 16px; font-weight: 600; margin: 15px 0; border-radius: 4px; }}
-        .badge {{ display: inline-block; background: #4caf50; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>📋 New Service Enquiry Received</h2>
-            <span class="badge">SLCI Chatbot System</span>
-        </div>
-        <div class="enquiry-id">🆔 Enquiry ID: {enquiry_id}</div>
-        <div class="content">
-            <div class="field"><div class="label">👤 Full Name</div><div class="value">{data['fullName']}</div></div>
-            <div class="field"><div class="label">🏢 Company Name</div><div class="value">{data['companyName']}</div></div>
-            <div class="field"><div class="label">📧 Email</div><div class="value"><a href="mailto:{data['email']}" style="color:#667eea;text-decoration:none">{data['email']}</a></div></div>
-            <div class="field"><div class="label">📞 Contact Number</div><div class="value"><a href="tel:{data['contactNumber']}" style="color:#667eea;text-decoration:none">{data['contactNumber']}</a></div></div>
-            <div class="field"><div class="label">🔧 Service Interested In</div><div class="value"><strong style="color:#1a237e">{data['service']}</strong></div></div>
-            <div class="field"><div class="label">❓ Query</div><div class="value" style="white-space:pre-wrap">{data['query']}</div></div>
-            <div class="field"><div class="label">📅 Submitted On</div><div class="value">{datetime.now().strftime('%d %B %Y at %I:%M %p IST')}</div></div>
-            <div class="field"><div class="label">🌐 Source IP</div><div class="value" style="font-family:monospace">{request.remote_addr if request else 'N/A'}</div></div>
-        </div>
-        <div class="footer">
-            <p><strong>Shakti Legal Compliance India</strong></p>
-            <p>📧 info@slci-india.com | 📞 +91 9999329153</p>
-            <p>🌐 www.slci.in</p>
-            <p style="margin-top:10px;font-size:10px;color:#999">This is an automated message. Please do not reply directly to this email.</p>
-        </div>
-    </div>
-</body>
-</html>"""
+        html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
+.container{{max-width:650px;margin:0 auto;padding:20px}}
+.header{{background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:25px 20px;text-align:center;border-radius:8px 8px 0 0}}
+.header h2{{margin:0;font-size:22px}}
+.content{{padding:25px;background:#f9f9f9;border:1px solid #e0e0e0;border-top:none}}
+.field{{margin:18px 0;padding:12px 15px;background:#fff;border-left:4px solid #667eea;border-radius:0 4px 4px 0}}
+.label{{font-weight:600;color:#1a237e;font-size:14px;margin-bottom:4px}}
+.value{{color:#333;font-size:15px;word-break:break-word}}
+.footer{{text-align:center;padding:20px;color:#666;font-size:12px;background:#f5f5f5;border-radius:0 0 8px 8px}}
+.enquiry-id{{background:#667eea;color:#fff;padding:12px;text-align:center;font-size:16px;font-weight:600;margin:15px 0;border-radius:4px}}
+.badge{{display:inline-block;background:#4caf50;color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}}
+</style></head><body><div class="container">
+<div class="header"><h2>📋 New Service Enquiry Received</h2><span class="badge">SLCI Chatbot</span></div>
+<div class="enquiry-id">🆔 Enquiry ID: {enquiry_id}</div>
+<div class="content">
+<div class="field"><div class="label">👤 Full Name</div><div class="value">{data['fullName']}</div></div>
+<div class="field"><div class="label">🏢 Company</div><div class="value">{data['companyName']}</div></div>
+<div class="field"><div class="label">📧 Email</div><div class="value"><a href="mailto:{data['email']}" style="color:#667eea">{data['email']}</a></div></div>
+<div class="field"><div class="label">📞 Phone</div><div class="value"><a href="tel:{data['contactNumber']}" style="color:#667eea">{data['contactNumber']}</a></div></div>
+<div class="field"><div class="label">🔧 Service</div><div class="value"><strong>{data['service']}</strong></div></div>
+<div class="field"><div class="label">❓ Query</div><div class="value" style="white-space:pre-wrap">{data['query']}</div></div>
+<div class="field"><div class="label">📅 Submitted</div><div class="value">{datetime.now().strftime('%d %b %Y, %I:%M %p IST')}</div></div>
+</div>
+<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
+</div></body></html>"""
         
-        # Plain text fallback
-        text_body = f"""NEW SERVICE ENQUIRY - ID: {enquiry_id}
-{'='*50}
-Full Name: {data['fullName']}
-Company: {data['companyName']}
-Email: {data['email']}
-Phone: {data['contactNumber']}
+        text_body = f"""SERVICE ENQUIRY #{enquiry_id}
+Name: {data['fullName']} | Company: {data['companyName']}
+Email: {data['email']} | Phone: {data['contactNumber']}
 Service: {data['service']}
 Query: {data['query']}
-Submitted: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
-Source IP: {request.remote_addr if request else 'N/A'}
-
+Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
 --
-Shakti Legal Compliance India
-www.slci.in | info@slci-india.com"""
+SLCI | www.slci.in"""
         
         msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
         msg.attach(MIMEText(html_body, 'html', 'utf-8'))
         
-        # 🔐 Try STARTTLS first (port 587), fallback to SSL (port 465)
-        server = None
-        try:
-            print(f"📧 [EMAIL] Attempting STARTTLS connection to {email_host}:{email_port}...")
-            server = smtplib.SMTP(email_host, email_port, timeout=30)
-            server.set_debuglevel(1)  # Enable SMTP debug output in Render logs
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(sender_email, sender_password.strip())
-            server.send_message(msg)
-            server.quit()
-            print(f"✅ [EMAIL] SUCCESS: Sent via STARTTLS (port {email_port}) to {receiver_email}")
-            return True
-            
-        except smtplib.SMTPAuthenticationError as e:
-            print(f"❌ [EMAIL] AUTH FAILED (STARTTLS): {e}")
-            print("💡 Trying fallback: SMTP_SSL on port 465...")
-            # Fallback to SSL on port 465
-            try:
-                if server:
-                    server.quit()
-                server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30)
-                server.login(sender_email, sender_password.strip())
-                server.send_message(msg)
-                server.quit()
-                print(f"✅ [EMAIL] SUCCESS: Sent via SMTP_SSL (port 465) to {receiver_email}")
-                return True
-            except Exception as ssl_error:
-                print(f"❌ [EMAIL] FALLBACK FAILED (SSL): {ssl_error}")
-                raise
-                
+        # 🔐 Use SMTP_SSL directly on port 465 (more reliable on Render)
+        server = smtplib.SMTP_SSL(email_host, email_port, timeout=30)
+        server.login(sender_email, sender_password.strip())
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ [EMAIL] SUCCESS: Sent service enquiry {enquiry_id} to {receiver_email}")
+        return True
+        
     except smtplib.SMTPAuthenticationError as e:
-        error_msg = str(e)
-        print(f"❌ [EMAIL] FINAL AUTH ERROR: {error_msg}")
-        if "535" in error_msg or "Authentication failed" in error_msg:
-            print("💡 FIX: Regenerate Gmail App Password at https://myaccount.google.com/apppasswords")
-            print("💡 Ensure 2-Step Verification is enabled on slciaiagent@gmail.com")
+        print(f"❌ [EMAIL] AUTH ERROR: {e}")
+        print("💡 FIX: Regenerate Gmail App Password at https://myaccount.google.com/apppasswords")
         return False
-    except smtplib.SMTPConnectError as e:
-        print(f"❌ [EMAIL] CONNECTION ERROR: {e}")
-        print("💡 FIX: Check Render firewall, try port 465 with SMTP_SSL")
-        return False
-    except smtplib.SMTPServerDisconnected as e:
-        print(f"❌ [EMAIL] SERVER DISCONNECTED: {e}")
+    except OSError as e:
+        print(f"❌ [EMAIL] NETWORK ERROR: {e}")
+        print("💡 FIX: Render may block SMTP. Try using Resend/SendGrid instead.")
         return False
     except Exception as e:
-        print(f"❌ [EMAIL] UNKNOWN ERROR: {type(e).__name__}: {str(e)}")
+        print(f"❌ [EMAIL] ERROR: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
-    finally:
-        if server:
-            try:
-                server.quit()
-            except:
-                pass
 
 
 def send_fee_enquiry_email(data, enquiry_id):
-    """Send formatted HTML email for fee enquiry - Render/Gmail optimized"""
+    """Send formatted HTML email for fee enquiry - Render fixed (Port 465)"""
     try:
         sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
         sender_password = os.getenv("EMAIL_PASSWORD", "")
         receiver_email = os.getenv("FEE_ENQUIRY_EMAIL", "slciaiagent@gmail.com")
         email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-        email_port = int(os.getenv('EMAIL_PORT', 587))
+        email_port = int(os.getenv('EMAIL_PORT', 465))
         
-        print(f"💰 [FEE EMAIL] Starting: {sender_email} → {receiver_email}")
-        print(f"💰 [FEE EMAIL] Password length: {len(sender_password) if sender_password else 0}")
+        print(f"💰 [FEE EMAIL] Starting: {sender_email} → {receiver_email} via {email_host}:{email_port}")
         
         if not sender_password or len(sender_password.strip()) != 16:
             print("❌ [FEE EMAIL] Invalid EMAIL_PASSWORD")
@@ -1141,9 +1074,7 @@ def send_fee_enquiry_email(data, enquiry_id):
         msg['Subject'] = f"💰 New Fee Enquiry - ID: {enquiry_id}"
         msg['Reply-To'] = data['email']
         
-        html_body = f"""<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><style>
+        html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
 .container{{max-width:650px;margin:0 auto;padding:20px}}
 .header{{background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:25px 20px;text-align:center;border-radius:8px 8px 0 0}}
@@ -1155,81 +1086,53 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 .footer{{text-align:center;padding:20px;color:#666;font-size:12px;background:#f5f5f5;border-radius:0 0 8px 8px}}
 .enquiry-id{{background:#ff9800;color:#fff;padding:12px;text-align:center;font-size:16px;font-weight:600;margin:15px 0;border-radius:4px}}
 .badge{{display:inline-block;background:#4caf50;color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}}
-</style></head>
-<body><div class="container">
-<div class="header"><h2>💰 New Fee Enquiry Received</h2><span class="badge">SLCI Pricing Team</span></div>
+</style></head><body><div class="container">
+<div class="header"><h2>💰 New Fee Enquiry Received</h2><span class="badge">SLCI Pricing</span></div>
 <div class="enquiry-id">🆔 Enquiry ID: {enquiry_id}</div>
 <div class="content">
 <div class="field"><div class="label">👤 Full Name</div><div class="value">{data['fullName']}</div></div>
-<div class="field"><div class="label">🏢 Company Name</div><div class="value">{data['companyName']}</div></div>
-<div class="field"><div class="label">📧 Email</div><div class="value"><a href="mailto:{data['email']}" style="color:#667eea;text-decoration:none">{data['email']}</a></div></div>
-<div class="field"><div class="label">📞 Contact Number</div><div class="value"><a href="tel:{data['contactNumber']}" style="color:#667eea;text-decoration:none">{data['contactNumber']}</a></div></div>
-<div class="field"><div class="label">📝 Description/Requirements</div><div class="value" style="white-space:pre-wrap">{data['description']}</div></div>
-<div class="field"><div class="label">📅 Submitted On</div><div class="value">{datetime.now().strftime('%d %B %Y at %I:%M %p IST')}</div></div>
-<div class="field"><div class="label">🌐 Source IP</div><div class="value" style="font-family:monospace">{request.remote_addr if request else 'N/A'}</div></div>
+<div class="field"><div class="label">🏢 Company</div><div class="value">{data['companyName']}</div></div>
+<div class="field"><div class="label">📧 Email</div><div class="value"><a href="mailto:{data['email']}" style="color:#667eea">{data['email']}</a></div></div>
+<div class="field"><div class="label">📞 Phone</div><div class="value"><a href="tel:{data['contactNumber']}" style="color:#667eea">{data['contactNumber']}</a></div></div>
+<div class="field"><div class="label">📝 Requirements</div><div class="value" style="white-space:pre-wrap">{data['description']}</div></div>
+<div class="field"><div class="label">📅 Submitted</div><div class="value">{datetime.now().strftime('%d %b %Y, %I:%M %p IST')}</div></div>
 </div>
-<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p><p style="margin-top:10px;font-size:10px;color:#999">Automated message - do not reply directly</p></div>
+<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
         
-        text_body = f"""FEE ENQUIRY - ID: {enquiry_id}
-{'='*50}
+        text_body = f"""FEE ENQUIRY #{enquiry_id}
 Name: {data['fullName']} | Company: {data['companyName']}
 Email: {data['email']} | Phone: {data['contactNumber']}
 Requirements: {data['description']}
-Submitted: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
-IP: {request.remote_addr if request else 'N/A'}
-
+Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
 --
-Shakti Legal Compliance India | www.slci.in"""
+SLCI | www.slci.in"""
         
         msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
         msg.attach(MIMEText(html_body, 'html', 'utf-8'))
         
-        # Same dual-protocol logic as service enquiry
-        server = None
-        try:
-            print(f"💰 [FEE EMAIL] Attempting STARTTLS to {email_host}:{email_port}...")
-            server = smtplib.SMTP(email_host, email_port, timeout=30)
-            server.set_debuglevel(1)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(sender_email, sender_password.strip())
-            server.send_message(msg)
-            server.quit()
-            print(f"✅ [FEE EMAIL] SUCCESS: Sent via STARTTLS to {receiver_email}")
-            return True
-        except smtplib.SMTPAuthenticationError as e:
-            print(f"❌ [FEE EMAIL] AUTH FAILED (STARTTLS): {e}")
-            print("💰 Trying fallback: SMTP_SSL on port 465...")
-            try:
-                if server:
-                    server.quit()
-                server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=30)
-                server.login(sender_email, sender_password.strip())
-                server.send_message(msg)
-                server.quit()
-                print(f"✅ [FEE EMAIL] SUCCESS: Sent via SMTP_SSL (port 465) to {receiver_email}")
-                return True
-            except Exception as ssl_error:
-                print(f"❌ [FEE EMAIL] FALLBACK FAILED: {ssl_error}")
-                raise
+        # 🔐 Use SMTP_SSL directly on port 465
+        server = smtplib.SMTP_SSL(email_host, email_port, timeout=30)
+        server.login(sender_email, sender_password.strip())
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ [FEE EMAIL] SUCCESS: Sent fee enquiry {enquiry_id} to {receiver_email}")
+        return True
+        
     except smtplib.SMTPAuthenticationError as e:
-        print(f"❌ [FEE EMAIL] FINAL AUTH ERROR: {e}")
-        if "535" in str(e):
-            print("💡 FIX: Regenerate Gmail App Password at https://myaccount.google.com/apppasswords")
+        print(f"❌ [FEE EMAIL] AUTH ERROR: {e}")
+        print("💡 FIX: Regenerate Gmail App Password")
+        return False
+    except OSError as e:
+        print(f"❌ [FEE EMAIL] NETWORK ERROR: {e}")
+        print("💡 FIX: Render may block SMTP. Try Resend/SendGrid.")
         return False
     except Exception as e:
         print(f"❌ [FEE EMAIL] ERROR: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
-    finally:
-        if server:
-            try:
-                server.quit()
-            except:
-                pass
 
 # ============================================================================
 # FLASK ROUTES
