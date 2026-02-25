@@ -87,54 +87,97 @@ GOOGLE_SHEET_ENABLED = os.getenv('GOOGLE_SHEET_ENABLED', 'true').lower() == 'tru
 # ============================================================================
 # DATABASE CONNECTION POOL (psycopg 3.x compatible)
 # ============================================================================
+# ============================================================================
+# DATABASE CONNECTION POOL (psycopg 3.x compatible) - ENHANCED FOR RENDER
+# ============================================================================
 db_pool = None
 
 def get_db_pool():
-    """Get database connection pool - psycopg 3.x compatible"""
+    """Get database connection pool - supports both individual params and DATABASE_URL"""
     global db_pool
     if db_pool is None:
         try:
-            conninfo = f"host={DB_HOST} port={DB_PORT} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD}"
+            # Check if DATABASE_URL is provided (Render's preferred method)
+            database_url = os.getenv('DATABASE_URL')
+            
+            if database_url:
+                # Fix: Render's DATABASE_URL might start with postgres:// but psycopg 3 needs postgresql://
+                if database_url.startswith('postgres://'):
+                    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+                
+                # Add SSL requirement for Render
+                if '?' in database_url:
+                    database_url += '&sslmode=require'
+                else:
+                    database_url += '?sslmode=require'
+                
+                conninfo = database_url
+                print(f"✅ Using DATABASE_URL connection")
+            else:
+                # Fall back to individual parameters
+                conninfo = f"host={DB_HOST} port={DB_PORT} dbname={DB_NAME} user={DB_USER} password={DB_PASSWORD} sslmode=require"
+            
+            print(f"🔌 Connecting to database...")
+            
             db_pool = ConnectionPool(
                 conninfo=conninfo,
                 min_size=1,
                 max_size=10,
-                open=True
+                open=True,
+                timeout=30
             )
             print("✅ Database pool created successfully")
+            
+            # Test the connection
+            test_conn = db_pool.getconn()
+            with test_conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
+                print(f"✅ Database connection test: {result}")
+            db_pool.putconn(test_conn)
+            
         except Exception as e:
-            print(f"⚠️ Database pool creation failed: {e}")
-            print("⚠️ App will run without database (check DB credentials)")
+            print(f"❌ Database pool creation failed: {e}")
+            print("\n📋 Troubleshooting Tips:")
+            print("   1. Check if database is in 'available' status on Render")
+            print("   2. Verify 0.0.0.0/0 is added in Networking section")
+            print("   3. Confirm password is copied correctly")
+            print("   4. Check if database is expired (free tier expires after 90 days)")
             return None
     return db_pool
 
 def get_db_connection():
-    """Get database connection from pool - psycopg 3.x compatible"""
+    """Get database connection from pool with error handling"""
     try:
         pool = get_db_pool()
         if pool:
-            return pool.getconn()
+            conn = pool.getconn()
+            # Set session parameters
+            with conn.cursor() as cursor:
+                cursor.execute("SET timezone TO 'Asia/Kolkata'")
+            return conn
         return None
     except Exception as e:
-        print(f"Database connection error: {str(e)}")
+        print(f"❌ Database connection error: {str(e)}")
         return None
 
 def release_db_connection(conn):
-    """Release connection back to pool - psycopg 3.x compatible"""
+    """Release connection back to pool"""
     if conn and db_pool:
         try:
             db_pool.putconn(conn)
         except Exception as e:
-            print(f"Error releasing connection: {str(e)}")
+            print(f"⚠️ Error releasing connection: {str(e)}")
 
 def init_db():
-    """Initialize database tables - psycopg 3.x compatible"""
+    """Initialize database tables with better error handling"""
     conn = None
     try:
         conn = get_db_connection()
         if not conn:
             print("⚠️ Skipping DB initialization - no connection")
             return
+        
         with conn.cursor() as cursor:
             # Create downloads table
             cursor.execute('''
@@ -156,6 +199,7 @@ def init_db():
                 UNIQUE(email, state, act_type, download_date)
             )
             ''')
+            
             # Create service enquiries table
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS service_enquiries (
@@ -174,6 +218,7 @@ def init_db():
                 notes TEXT
             )
             ''')
+            
             # Create fee enquiries table
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS fee_enquiries (
@@ -191,16 +236,13 @@ def init_db():
                 notes TEXT
             )
             ''')
-            # Create indexes for faster queries
+            
+            # Create indexes
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_email ON downloads(email)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_date ON downloads(download_date)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_state ON downloads(state)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_downloads_act ON downloads(act_type)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_email ON service_enquiries(email)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_date ON service_enquiries(submission_date)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_enquiries_status ON service_enquiries(status)')
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_fee_enquiries_email ON fee_enquiries(email)')
-            cursor.execute('CREATE INDEX IF NOT EXISTS idx_fee_enquiries_date ON fee_enquiries(submission_date)')
+            
             # Create statistics table
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS download_stats (
@@ -212,12 +254,69 @@ def init_db():
                 UNIQUE(state, act_type)
             )
             ''')
+            
             conn.commit()
             print("✅ Database tables initialized successfully")
+            
+            # Show table count
+            cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
+            table_count = cursor.fetchone()[0]
+            print(f"📊 Total tables in database: {table_count}")
+            
     except Exception as e:
         print(f"❌ Database initialization error: {str(e)}")
         if conn:
             conn.rollback()
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+# Add a health check endpoint for database
+@app.route("/db-health", methods=["GET"])
+def db_health():
+    """Check database connection status"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({
+                "status": "error",
+                "message": "Could not connect to database",
+                "db_host": DB_HOST,
+                "db_name": DB_NAME
+            }), 500
+        
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT current_database(), current_user, version()")
+            db_name, db_user, version = cursor.fetchone()
+            
+            # Get table counts
+            cursor.execute("SELECT COUNT(*) FROM downloads")
+            downloads_count = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM service_enquiries")
+            service_count = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM fee_enquiries")
+            fee_count = cursor.fetchone()[0]
+        
+        return jsonify({
+            "status": "healthy",
+            "database": db_name,
+            "user": db_user,
+            "version": version.split(',')[0],
+            "tables": {
+                "downloads": downloads_count,
+                "service_enquiries": service_count,
+                "fee_enquiries": fee_count
+            },
+            "connection": "DATABASE_URL" if os.getenv('DATABASE_URL') else "individual parameters"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
     finally:
         if conn:
             release_db_connection(conn)
