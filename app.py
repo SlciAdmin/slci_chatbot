@@ -90,6 +90,11 @@ GOOGLE_SHEET_ENABLED = os.getenv('GOOGLE_SHEET_ENABLED', 'true').lower() == 'tru
 # ============================================================================
 # DATABASE CONNECTION POOL (psycopg 3.x compatible) - ENHANCED FOR RENDER
 # ============================================================================
+# ============================================================================
+# DATABASE CONNECTION POOL (psycopg 3.x compatible) - COMPLETELY FIXED
+# ============================================================================
+db_pool = None  # Module level variable
+
 def get_db_pool():
     """Get database connection pool - FIXED for Render"""
     global db_pool
@@ -150,7 +155,6 @@ def get_db_pool():
 
 def init_db():
     """Create all tables if they don't exist"""
-    conn = None
     try:
         print("📊 Initializing database tables...")
         
@@ -159,6 +163,7 @@ def init_db():
             print("❌ Cannot initialize DB - no connection pool")
             return False
         
+        # Use context manager - automatically handles connection return to pool
         with pool.connection() as conn:
             with conn.cursor() as cur:
                 # Create downloads table
@@ -252,12 +257,15 @@ def init_db():
         
     except Exception as e:
         print(f"❌ Database initialization error: {e}")
-        if conn:
-            conn.rollback()
+        import traceback
+        traceback.print_exc()
         return False
 
+# ⚠️ DEPRECATED - Avoid using these functions directly
+# Use 'with pool.connection() as conn:' instead
 def get_db_connection():
-    """Get database connection"""
+    """DEPRECATED: Use pool.connection() context manager instead"""
+    global db_pool
     try:
         pool = get_db_pool()
         if pool:
@@ -268,7 +276,8 @@ def get_db_connection():
         return None
 
 def release_db_connection(conn):
-    """Release connection back to pool"""
+    """DEPRECATED: Use pool.connection() context manager instead"""
+    global db_pool  # ← FIXED: Added global
     if conn and db_pool:
         try:
             db_pool.putconn(conn)
@@ -466,13 +475,13 @@ def debug_sheets():
 # ============================================================================
 def log_download_request(data, ip_address, user_agent):
     """Log download to database"""
-    conn = None
     try:
         pool = get_db_pool()
         if not pool:
             print("⚠️ No database pool available")
             return None
         
+        # Use context manager instead of manual connection management
         with pool.connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -509,10 +518,10 @@ def log_download_request(data, ip_address, user_agent):
                 
     except Exception as e:
         print(f"❌ Download logging error: {e}")
-        if conn:
-            conn.rollback()
+        import traceback
+        traceback.print_exc()
         return None
-
+    
 def get_download_statistics():
     """Get download statistics - psycopg 3.x compatible"""
     conn = None
