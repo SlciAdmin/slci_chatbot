@@ -4,8 +4,8 @@ services:
     env: python
     plan: free
     
-    # ✅ CRITICAL: Python version at service level (NOT in envVars)
-    pythonVersion: "3.14"
+    # ✅ CRITICAL: Python version at service level
+    pythonVersion: 3.14.3
     
     buildCommand: |
       apt-get update && apt-get install -y \
@@ -47,3 +47,9 @@ services:
         sync: false
       - key: GOOGLE_SHEET_ENABLED
         value: "true"
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
