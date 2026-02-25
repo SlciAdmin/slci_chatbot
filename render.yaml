@@ -4,16 +4,15 @@ services:
   env: python
   plan: free
   buildCommand: |
-    # Force Python 3.10
-    python --version
+    # Install system dependencies for Pillow
+    apt-get update && apt-get install -y libjpeg-dev zlib1g-dev libpng-dev libfreetype6-dev
+    # Install Python packages
     pip install --upgrade pip setuptools wheel
     pip install -r requirements.txt
-    python --version  # Verify version after build
   startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 3 --timeout 120 --log-level info
   envVars:
-    # CRITICAL: Set Python version in multiple places
     - key: PYTHON_VERSION
-      value: "3.10.11"
+      value: "3.10.13"
     - key: PIP_DEFAULT_TIMEOUT
       value: "100"
     - key: SECRET_KEY

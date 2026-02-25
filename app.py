@@ -3,12 +3,8 @@ import sys
 import os
 
 if sys.version_info < (3, 10) or sys.version_info >= (3, 11):
-    print(f"⚠️ WARNING: This app is designed for Python 3.10.x")
-    print(f"⚠️ Current Python version: {sys.version}")
-    print(f"⚠️ You may experience compatibility issues")
-    # Don't exit, but warn clearly
-else:
-    print(f"✅ Python version OK: {sys.version}")
+    print(f"⚠️ WARNING: Python version is {sys.version}")
+    print("✅ Continuing anyway...")
 
 # Load environment variables FIRST
 from dotenv import load_dotenv
