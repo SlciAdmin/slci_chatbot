@@ -11,7 +11,6 @@ import hashlib
 import hmac
 import secrets
 import time
-import smtplib
 from datetime import datetime
 from functools import wraps
 from threading import Lock
@@ -46,8 +45,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # Add these missing imports
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
 
 # ============================================================================
@@ -1052,28 +1049,25 @@ def get_fast_response(query):
 # ============================================================================
 # EMAIL FUNCTIONS - FIXED FOR RENDER (SMTP_SSL Port 465)
 # ============================================================================
+# ============================================================================
+# EMAIL FUNCTIONS - RESEND API (Render Free Tier Compatible)
+# ============================================================================
+import resend
+
+# Initialize Resend once at module level
+resend.api_key = os.getenv("RESEND_API_KEY", "")
 
 def send_service_enquiry_email(data, enquiry_id):
-    """Send formatted HTML email for service enquiry - Render fixed (Port 465)"""
+    """Send formatted HTML email for service enquiry using Resend API"""
     try:
-        sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
-        sender_password = os.getenv("EMAIL_PASSWORD", "")
-        receiver_email = os.getenv("EMAIL_TO", "slciaiagent@gmail.com")
-        email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-        email_port = int(os.getenv('EMAIL_PORT', 465))  # Default to 465
-        
-        print(f"📧 [EMAIL] Starting: {sender_email} → {receiver_email} via {email_host}:{email_port}")
-        print(f"📧 [EMAIL] Password length: {len(sender_password) if sender_password else 0}")
-        
-        if not sender_password or len(sender_password.strip()) != 16:
-            print("❌ [EMAIL] Invalid EMAIL_PASSWORD - must be 16-char Gmail App Password")
+        if not resend.api_key:
+            print("❌ [RESEND] API key not configured")
             return False
+            
+        sender_email = os.getenv("EMAIL_FROM", "slciaiagent@gmail.com")
+        receiver_email = os.getenv("EMAIL_TO", "slciaiagent@gmail.com")
         
-        msg = MIMEMultipart('alternative')
-        msg['From'] = sender_email
-        msg['To'] = receiver_email
-        msg['Subject'] = f"🔧 New Service Enquiry - {data['service']} - ID: {enquiry_id}"
-        msg['Reply-To'] = data['email']
+        print(f"📧 [RESEND] Sending service enquiry {enquiry_id}: {sender_email} → {receiver_email}")
         
         html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
@@ -1102,7 +1096,14 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 <div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
         
-        text_body = f"""SERVICE ENQUIRY #{enquiry_id}
+        # Send via Resend API
+        params = {
+            "from": f"SLCI Chatbot <{sender_email}>",
+            "to": receiver_email,
+            "reply_to": data['email'],
+            "subject": f"🔧 New Service Enquiry - {data['service']} - ID: {enquiry_id}",
+            "html": html_body,
+            "text": f"""SERVICE ENQUIRY #{enquiry_id}
 Name: {data['fullName']} | Company: {data['companyName']}
 Email: {data['email']} | Phone: {data['contactNumber']}
 Service: {data['service']}
@@ -1110,54 +1111,30 @@ Query: {data['query']}
 Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
 --
 SLCI | www.slci.in"""
+        }
         
-        msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
-        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-        
-        # 🔐 Use SMTP_SSL directly on port 465 (more reliable on Render)
-        server = smtplib.SMTP_SSL(email_host, email_port, timeout=30)
-        server.login(sender_email, sender_password.strip())
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"✅ [EMAIL] SUCCESS: Sent service enquiry {enquiry_id} to {receiver_email}")
+        email = resend.Emails.send(params)
+        print(f"✅ [RESEND] SUCCESS: Service enquiry {enquiry_id} sent (ID: {email['id']})")
         return True
         
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"❌ [EMAIL] AUTH ERROR: {e}")
-        print("💡 FIX: Regenerate Gmail App Password at https://myaccount.google.com/apppasswords")
-        return False
-    except OSError as e:
-        print(f"❌ [EMAIL] NETWORK ERROR: {e}")
-        print("💡 FIX: Render may block SMTP. Try using Resend/SendGrid instead.")
-        return False
     except Exception as e:
-        print(f"❌ [EMAIL] ERROR: {type(e).__name__}: {str(e)}")
+        print(f"❌ [RESEND] ERROR: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
 
 
 def send_fee_enquiry_email(data, enquiry_id):
-    """Send formatted HTML email for fee enquiry - Render fixed (Port 465)"""
+    """Send formatted HTML email for fee enquiry using Resend API"""
     try:
-        sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
-        sender_password = os.getenv("EMAIL_PASSWORD", "")
-        receiver_email = os.getenv("FEE_ENQUIRY_EMAIL", "slciaiagent@gmail.com")
-        email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-        email_port = int(os.getenv('EMAIL_PORT', 465))
-        
-        print(f"💰 [FEE EMAIL] Starting: {sender_email} → {receiver_email} via {email_host}:{email_port}")
-        
-        if not sender_password or len(sender_password.strip()) != 16:
-            print("❌ [FEE EMAIL] Invalid EMAIL_PASSWORD")
+        if not resend.api_key:
+            print("❌ [RESEND] API key not configured")
             return False
+            
+        sender_email = os.getenv("EMAIL_FROM", "slciaiagent@gmail.com")
+        receiver_email = os.getenv("FEE_ENQUIRY_EMAIL", "slciaiagent@gmail.com")
         
-        msg = MIMEMultipart('alternative')
-        msg['From'] = sender_email
-        msg['To'] = receiver_email
-        msg['Subject'] = f"💰 New Fee Enquiry - ID: {enquiry_id}"
-        msg['Reply-To'] = data['email']
+        print(f"💰 [RESEND] Sending fee enquiry {enquiry_id}: {sender_email} → {receiver_email}")
         
         html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
@@ -1185,36 +1162,27 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 <div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
         
-        text_body = f"""FEE ENQUIRY #{enquiry_id}
+        params = {
+            "from": f"SLCI Chatbot <{sender_email}>",
+            "to": receiver_email,
+            "reply_to": data['email'],
+            "subject": f"💰 New Fee Enquiry - ID: {enquiry_id}",
+            "html": html_body,
+            "text": f"""FEE ENQUIRY #{enquiry_id}
 Name: {data['fullName']} | Company: {data['companyName']}
 Email: {data['email']} | Phone: {data['contactNumber']}
 Requirements: {data['description']}
 Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
 --
 SLCI | www.slci.in"""
+        }
         
-        msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
-        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-        
-        # 🔐 Use SMTP_SSL directly on port 465
-        server = smtplib.SMTP_SSL(email_host, email_port, timeout=30)
-        server.login(sender_email, sender_password.strip())
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"✅ [FEE EMAIL] SUCCESS: Sent fee enquiry {enquiry_id} to {receiver_email}")
+        email = resend.Emails.send(params)
+        print(f"✅ [RESEND] SUCCESS: Fee enquiry {enquiry_id} sent (ID: {email['id']})")
         return True
         
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"❌ [FEE EMAIL] AUTH ERROR: {e}")
-        print("💡 FIX: Regenerate Gmail App Password")
-        return False
-    except OSError as e:
-        print(f"❌ [FEE EMAIL] NETWORK ERROR: {e}")
-        print("💡 FIX: Render may block SMTP. Try Resend/SendGrid.")
-        return False
     except Exception as e:
-        print(f"❌ [FEE EMAIL] ERROR: {type(e).__name__}: {str(e)}")
+        print(f"❌ [RESEND] ERROR: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
