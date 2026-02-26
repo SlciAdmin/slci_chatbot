@@ -636,30 +636,41 @@ def generate_pdf(token):
             if token not in pending_downloads:
                 return jsonify({"error": "Invalid or expired download token"}), 404
             pending_data = pending_downloads[token]
-            if (datetime.now() - pending_data['created_at']).total_seconds() > 600:
+            
+            # ✅ FIX: Use get_ist_now() for consistent naive datetime comparison
+            if (get_ist_now() - pending_data['created_at']).total_seconds() > 600:
                 del pending_downloads[token]
                 return jsonify({"error": "Download token expired"}), 410
+            
             form_data = pending_data['data']
             download_id = pending_data['download_id']
             del pending_downloads[token]
-        state = form_data['state'].lower().replace('_', ' ')
-        act_type = form_data['actType'].lower()
-        pdf_data = None
-        if act_type == 'minimum_wages':
-            pdf_data = fetch_minimum_wages(state)
-        elif act_type == 'holiday_list':
-            pdf_data = fetch_holiday_list(state)
-        elif act_type == 'working_hours':
-            pdf_data = fetch_working_hours(state)
-        elif act_type == 'shop_establishment':
-            pdf_data = fetch_shop_establishment(state)
-        else:
-            return jsonify({"error": "Invalid act type"}), 400
-        if not pdf_data or not pdf_data.get('tables_data'):
-            return jsonify({"error": "No data found to generate PDF"}), 404
-        pdf_file = create_pdf_file(state, pdf_data.get("act_type", act_type), pdf_data.get("tables_data", []), pdf_data.get("effective_date"), download_id)
-        filename = f"{act_type}_{state.replace(' ', '_')}.pdf"
-        return send_file(pdf_file, mimetype='application/pdf', as_attachment=True, download_name=filename)
+            
+            state = form_data['state'].lower().replace('_', ' ')
+            act_type = form_data['actType'].lower()
+            
+            pdf_data = None
+            if act_type == 'minimum_wages':
+                pdf_data = fetch_minimum_wages(state)
+            elif act_type == 'holiday_list':
+                pdf_data = fetch_holiday_list(state)
+            elif act_type == 'working_hours':
+                pdf_data = fetch_working_hours(state)
+            elif act_type == 'shop_establishment':
+                pdf_data = fetch_shop_establishment(state)
+            else:
+                return jsonify({"error": "Invalid act type"}), 400
+            
+            if not pdf_data or not pdf_data.get('tables_data'):
+                return jsonify({"error": "No data found to generate PDF"}), 404
+            
+            pdf_file = create_pdf_file(state, pdf_data.get("act_type", act_type), 
+                                     pdf_data.get("tables_data", []), 
+                                     pdf_data.get("effective_date"), download_id)
+            
+            filename = f"{act_type}_{state.replace(' ', '_')}.pdf"
+            return send_file(pdf_file, mimetype='application/pdf', 
+                           as_attachment=True, download_name=filename)
     except Exception as e:
         print(f"PDF Generation Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -1064,7 +1075,6 @@ def get_fast_response(query):
 # ============================================================================
 # EMAIL FUNCTIONS - FIXED FOR RENDER (SMTP_SSL Port 465)
 # ============================================================================
-
 def send_service_enquiry_email(data, enquiry_id):
     """Send formatted HTML email for service enquiry - Render fixed (Port 465)"""
     try:
@@ -1072,69 +1082,70 @@ def send_service_enquiry_email(data, enquiry_id):
         sender_password = os.getenv("EMAIL_PASSWORD", "")
         receiver_email = os.getenv("EMAIL_TO", "slciaiagent@gmail.com")
         email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-        email_port = int(os.getenv('EMAIL_PORT', 465))  # Default to 465
-        
+        email_port = int(os.getenv('EMAIL_PORT', 465))
+
         print(f"📧 [EMAIL] Starting: {sender_email} → {receiver_email} via {email_host}:{email_port}")
-        print(f"📧 [EMAIL] Password length: {len(sender_password) if sender_password else 0}")
-        
+
         if not sender_password or len(sender_password.strip()) != 16:
             print("❌ [EMAIL] Invalid EMAIL_PASSWORD - must be 16-char Gmail App Password")
             return False
-        
+
         msg = MIMEMultipart('alternative')
         msg['From'] = sender_email
         msg['To'] = receiver_email
         msg['Subject'] = f"🔧 New Service Enquiry - {data['service']} - ID: {enquiry_id}"
         msg['Reply-To'] = data['email']
-        
+
+        # ✅ FIX: Use get_ist_now() for IST timestamp in email
+        ist_timestamp = get_ist_now().strftime('%d %b %Y, %I:%M %p IST')
+
         html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
-.container{{max-width:650px;margin:0 auto;padding:20px}}
-.header{{background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:25px 20px;text-align:center;border-radius:8px 8px 0 0}}
-.header h2{{margin:0;font-size:22px}}
-.content{{padding:25px;background:#f9f9f9;border:1px solid #e0e0e0;border-top:none}}
-.field{{margin:18px 0;padding:12px 15px;background:#fff;border-left:4px solid #667eea;border-radius:0 4px 4px 0}}
-.label{{font-weight:600;color:#1a237e;font-size:14px;margin-bottom:4px}}
-.value{{color:#333;font-size:15px;word-break:break-word}}
-.footer{{text-align:center;padding:20px;color:#666;font-size:12px;background:#f5f5f5;border-radius:0 0 8px 8px}}
-.enquiry-id{{background:#667eea;color:#fff;padding:12px;text-align:center;font-size:16px;font-weight:600;margin:15px 0;border-radius:4px}}
-.badge{{display:inline-block;background:#4caf50;color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}}
-</style></head><body><div class="container">
-<div class="header"><h2>📋 New Service Enquiry Received</h2><span class="badge">SLCI Chatbot</span></div>
-<div class="enquiry-id">🆔 Enquiry ID: {enquiry_id}</div>
-<div class="content">
-<div class="field"><div class="label">👤 Full Name</div><div class="value">{data['fullName']}</div></div>
-<div class="field"><div class="label">🏢 Company</div><div class="value">{data['companyName']}</div></div>
-<div class="field"><div class="label">📧 Email</div><div class="value"><a href="mailto:{data['email']}" style="color:#667eea">{data['email']}</a></div></div>
-<div class="field"><div class="label">📞 Phone</div><div class="value"><a href="tel:{data['contactNumber']}" style="color:#667eea">{data['contactNumber']}</a></div></div>
-<div class="field"><div class="label">🔧 Service</div><div class="value"><strong>{data['service']}</strong></div></div>
-<div class="field"><div class="label">❓ Query</div><div class="value" style="white-space:pre-wrap">{data['query']}</div></div>
-<div class="field"><div class="label">📅 Submitted</div><div class="value">{datetime.now().strftime('%d %b %Y, %I:%M %p IST')}</div></div>
-</div>
-<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
-</div></body></html>"""
-        
+        body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
+        .container{{max-width:650px;margin:0 auto;padding:20px}}
+        .header{{background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:25px 20px;text-align:center;border-radius:8px 8px 0 0}}
+        .header h2{{margin:0;font-size:22px}}
+        .content{{padding:25px;background:#f9f9f9;border:1px solid #e0e0e0;border-top:none}}
+        .field{{margin:18px 0;padding:12px 15px;background:#fff;border-left:4px solid #667eea;border-radius:0 4px 4px 0}}
+        .label{{font-weight:600;color:#1a237e;font-size:14px;margin-bottom:4px}}
+        .value{{color:#333;font-size:15px;word-break:break-word}}
+        .footer{{text-align:center;padding:20px;color:#666;font-size:12px;background:#f5f5f5;border-radius:0 0 8px 8px}}
+        .enquiry-id{{background:#667eea;color:#fff;padding:12px;text-align:center;font-size:16px;font-weight:600;margin:15px 0;border-radius:4px}}
+        .badge{{display:inline-block;background:#4caf50;color:#fff;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}}
+        </style></head><body><div class="container">
+        <div class="header"><h2>📋 New Service Enquiry Received</h2><span class="badge">SLCI Chatbot</span></div>
+        <div class="enquiry-id">🆔 Enquiry ID: {enquiry_id}</div>
+        <div class="content">
+        <div class="field"><div class="label">👤 Full Name</div><div class="value">{data['fullName']}</div></div>
+        <div class="field"><div class="label">🏢 Company</div><div class="value">{data['companyName']}</div></div>
+        <div class="field"><div class="label">📧 Email</div><div class="value"><a href="mailto:{data['email']}" style="color:#667eea">{data['email']}</a></div></div>
+        <div class="field"><div class="label">📞 Phone</div><div class="value"><a href="tel:{data['contactNumber']}" style="color:#667eea">{data['contactNumber']}</a></div></div>
+        <div class="field"><div class="label">🔧 Service</div><div class="value"><strong>{data['service']}</strong></div></div>
+        <div class="field"><div class="label">❓ Query</div><div class="value" style="white-space:pre-wrap">{data['query']}</div></div>
+        <div class="field"><div class="label">📅 Submitted</div><div class="value">{ist_timestamp}</div></div>
+        </div>
+        <div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
+        </div></body></html>"""
+
         text_body = f"""SERVICE ENQUIRY #{enquiry_id}
 Name: {data['fullName']} | Company: {data['companyName']}
 Email: {data['email']} | Phone: {data['contactNumber']}
 Service: {data['service']}
 Query: {data['query']}
-Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
+Time: {ist_timestamp}
 --
 SLCI | www.slci.in"""
-        
+
         msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
         msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-        
-        # 🔐 Use SMTP_SSL directly on port 465 (more reliable on Render)
+
         server = smtplib.SMTP_SSL(email_host, email_port, timeout=30)
         server.login(sender_email, sender_password.strip())
         server.send_message(msg)
         server.quit()
-        
+
         print(f"✅ [EMAIL] SUCCESS: Sent service enquiry {enquiry_id} to {receiver_email}")
         return True
-        
+
     except smtplib.SMTPAuthenticationError as e:
         print(f"❌ [EMAIL] AUTH ERROR: {e}")
         print("💡 FIX: Regenerate Gmail App Password at https://myaccount.google.com/apppasswords")
@@ -1171,6 +1182,9 @@ def send_fee_enquiry_email(data, enquiry_id):
         msg['Subject'] = f"💰 New Fee Enquiry - ID: {enquiry_id}"
         msg['Reply-To'] = data['email']
         
+        # ✅ FIX: Use get_ist_now() for IST timestamp in email (same as service enquiry)
+        ist_timestamp = get_ist_now().strftime('%d %b %Y, %I:%M %p IST')
+
         html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
 .container{{max-width:650px;margin:0 auto;padding:20px}}
@@ -1192,7 +1206,7 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 <div class="field"><div class="label">📧 Email</div><div class="value"><a href="mailto:{data['email']}" style="color:#667eea">{data['email']}</a></div></div>
 <div class="field"><div class="label">📞 Phone</div><div class="value"><a href="tel:{data['contactNumber']}" style="color:#667eea">{data['contactNumber']}</a></div></div>
 <div class="field"><div class="label">📝 Requirements</div><div class="value" style="white-space:pre-wrap">{data['description']}</div></div>
-<div class="field"><div class="label">📅 Submitted</div><div class="value">{datetime.now().strftime('%d %b %Y, %I:%M %p IST')}</div></div>
+<div class="field"><div class="label">📅 Submitted</div><div class="value">{ist_timestamp}</div></div>
 </div>
 <div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
@@ -1201,7 +1215,7 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 Name: {data['fullName']} | Company: {data['companyName']}
 Email: {data['email']} | Phone: {data['contactNumber']}
 Requirements: {data['description']}
-Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
+Time: {ist_timestamp}
 --
 SLCI | www.slci.in"""
         
