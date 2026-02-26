@@ -37,4 +37,3 @@ email-validator>=2.0.0
 
 # For HTML parsing (used in email templates)
 MarkupSafe>=2.1.0
-resend>=0.8.0
