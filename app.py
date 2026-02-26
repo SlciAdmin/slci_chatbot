@@ -1052,36 +1052,30 @@ def get_fast_response(query):
 # ============================================================================
 # EMAIL FUNCTIONS - FIXED FOR RENDER (SMTP_SSL Port 465)
 # ============================================================================
-# ============================================================================
-# EMAIL FUNCTIONS - GMAIL SMTP PORT 587 (STARTTLS) - RENDER COMPATIBLE
-# ============================================================================
 
-def send_service_enquiry_email(data, enquiry_id, max_retries=3):
-    """Send formatted HTML email for service enquiry using Gmail SMTP Port 587"""
-    for attempt in range(max_retries):
-        try:
-            sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
-            sender_password = os.getenv("EMAIL_PASSWORD", "")
-            receiver_email = os.getenv("EMAIL_TO", "slciaiagent@gmail.com")
-            email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-            email_port = int(os.getenv('EMAIL_PORT', 587))
-            
-            print(f"📧 [GMAIL SMTP] Attempt {attempt+1}/{max_retries}: {sender_email} → {receiver_email} via {email_host}:{email_port}")
-            
-            # Validate password
-            if not sender_password or len(sender_password.strip()) != 16:
-                print("❌ [EMAIL] Invalid EMAIL_PASSWORD - must be 16-char Gmail App Password")
-                return False
-            
-            # Create message
-            msg = MIMEMultipart('alternative')
-            msg['From'] = sender_email
-            msg['To'] = receiver_email
-            msg['Subject'] = f"🔧 New Service Enquiry - {data['service']} - ID: {enquiry_id}"
-            msg['Reply-To'] = data['email']
-            
-            # HTML body
-            html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+def send_service_enquiry_email(data, enquiry_id):
+    """Send formatted HTML email for service enquiry - Render fixed (Port 465)"""
+    try:
+        sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
+        sender_password = os.getenv("EMAIL_PASSWORD", "")
+        receiver_email = os.getenv("EMAIL_TO", "slciaiagent@gmail.com")
+        email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+        email_port = int(os.getenv('EMAIL_PORT', 465))  # Default to 465
+        
+        print(f"📧 [EMAIL] Starting: {sender_email} → {receiver_email} via {email_host}:{email_port}")
+        print(f"📧 [EMAIL] Password length: {len(sender_password) if sender_password else 0}")
+        
+        if not sender_password or len(sender_password.strip()) != 16:
+            print("❌ [EMAIL] Invalid EMAIL_PASSWORD - must be 16-char Gmail App Password")
+            return False
+        
+        msg = MIMEMultipart('alternative')
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
+        msg['Subject'] = f"🔧 New Service Enquiry - {data['service']} - ID: {enquiry_id}"
+        msg['Reply-To'] = data['email']
+        
+        html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
 .container{{max-width:650px;margin:0 auto;padding:20px}}
 .header{{background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:25px 20px;text-align:center;border-radius:8px 8px 0 0}}
@@ -1107,9 +1101,8 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 </div>
 <div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
-            
-            # Text fallback
-            text_body = f"""SERVICE ENQUIRY #{enquiry_id}
+        
+        text_body = f"""SERVICE ENQUIRY #{enquiry_id}
 Name: {data['fullName']} | Company: {data['companyName']}
 Email: {data['email']} | Phone: {data['contactNumber']}
 Service: {data['service']}
@@ -1117,75 +1110,56 @@ Query: {data['query']}
 Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
 --
 SLCI | www.slci.in"""
-            
-            msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
-            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-            
-            # 🔐 Connect using STARTTLS on port 587
-            server = smtplib.SMTP(email_host, email_port, timeout=30)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(sender_email, sender_password.strip())
-            server.send_message(msg)
-            server.quit()
-            
-            print(f"✅ [GMAIL SMTP] SUCCESS: Service enquiry {enquiry_id} sent to {receiver_email}")
-            return True
-            
-        except smtplib.SMTPAuthenticationError as e:
-            print(f"❌ [EMAIL] AUTH ERROR (Attempt {attempt+1}): {e}")
-            print("💡 FIX: Regenerate Gmail App Password at https://myaccount.google.com/apppasswords")
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            return False
-            
-        except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, OSError) as e:
-            print(f"❌ [EMAIL] NETWORK ERROR (Attempt {attempt+1}): {e}")
-            print(f"💡 Render may block SMTP. Waiting {2**attempt}s before retry...")
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            print("⚠️ Email failed after retries - enquiry will still be saved to database")
-            return False
-            
-        except Exception as e:
-            print(f"❌ [EMAIL] ERROR (Attempt {attempt+1}): {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            return False
-    
-    return False
+        
+        msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+        
+        # 🔐 Use SMTP_SSL directly on port 465 (more reliable on Render)
+        server = smtplib.SMTP_SSL(email_host, email_port, timeout=30)
+        server.login(sender_email, sender_password.strip())
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ [EMAIL] SUCCESS: Sent service enquiry {enquiry_id} to {receiver_email}")
+        return True
+        
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"❌ [EMAIL] AUTH ERROR: {e}")
+        print("💡 FIX: Regenerate Gmail App Password at https://myaccount.google.com/apppasswords")
+        return False
+    except OSError as e:
+        print(f"❌ [EMAIL] NETWORK ERROR: {e}")
+        print("💡 FIX: Render may block SMTP. Try using Resend/SendGrid instead.")
+        return False
+    except Exception as e:
+        print(f"❌ [EMAIL] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
-def send_fee_enquiry_email(data, enquiry_id, max_retries=3):
-    """Send formatted HTML email for fee enquiry using Gmail SMTP Port 587"""
-    for attempt in range(max_retries):
-        try:
-            sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
-            sender_password = os.getenv("EMAIL_PASSWORD", "")
-            receiver_email = os.getenv("FEE_ENQUIRY_EMAIL", "slciaiagent@gmail.com")
-            email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-            email_port = int(os.getenv('EMAIL_PORT', 587))
-            
-            print(f"💰 [GMAIL SMTP] Attempt {attempt+1}/{max_retries}: {sender_email} → {receiver_email}")
-            
-            if not sender_password or len(sender_password.strip()) != 16:
-                print("❌ [FEE EMAIL] Invalid EMAIL_PASSWORD")
-                return False
-            
-            msg = MIMEMultipart('alternative')
-            msg['From'] = sender_email
-            msg['To'] = receiver_email
-            msg['Subject'] = f"💰 New Fee Enquiry - ID: {enquiry_id}"
-            msg['Reply-To'] = data['email']
-            
-            # HTML body
-            html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+def send_fee_enquiry_email(data, enquiry_id):
+    """Send formatted HTML email for fee enquiry - Render fixed (Port 465)"""
+    try:
+        sender_email = os.getenv("EMAIL_USER", "slciaiagent@gmail.com")
+        sender_password = os.getenv("EMAIL_PASSWORD", "")
+        receiver_email = os.getenv("FEE_ENQUIRY_EMAIL", "slciaiagent@gmail.com")
+        email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+        email_port = int(os.getenv('EMAIL_PORT', 465))
+        
+        print(f"💰 [FEE EMAIL] Starting: {sender_email} → {receiver_email} via {email_host}:{email_port}")
+        
+        if not sender_password or len(sender_password.strip()) != 16:
+            print("❌ [FEE EMAIL] Invalid EMAIL_PASSWORD")
+            return False
+        
+        msg = MIMEMultipart('alternative')
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
+        msg['Subject'] = f"💰 New Fee Enquiry - ID: {enquiry_id}"
+        msg['Reply-To'] = data['email']
+        
+        html_body = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;margin:0;padding:0}}
 .container{{max-width:650px;margin:0 auto;padding:20px}}
 .header{{background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:25px 20px;text-align:center;border-radius:8px 8px 0 0}}
@@ -1210,55 +1184,40 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 </div>
 <div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
-            
-            text_body = f"""FEE ENQUIRY #{enquiry_id}
+        
+        text_body = f"""FEE ENQUIRY #{enquiry_id}
 Name: {data['fullName']} | Company: {data['companyName']}
 Email: {data['email']} | Phone: {data['contactNumber']}
 Requirements: {data['description']}
 Time: {datetime.now().strftime('%d %b %Y, %I:%M %p IST')}
 --
 SLCI | www.slci.in"""
-            
-            msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
-            msg.attach(MIMEText(html_body, 'html', 'utf-8'))
-            
-            # 🔐 Connect using STARTTLS on port 587
-            server = smtplib.SMTP(email_host, email_port, timeout=30)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(sender_email, sender_password.strip())
-            server.send_message(msg)
-            server.quit()
-            
-            print(f"✅ [GMAIL SMTP] SUCCESS: Fee enquiry {enquiry_id} sent to {receiver_email}")
-            return True
-            
-        except smtplib.SMTPAuthenticationError as e:
-            print(f"❌ [FEE EMAIL] AUTH ERROR (Attempt {attempt+1}): {e}")
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            return False
-            
-        except (smtplib.SMTPConnectError, smtplib.SMTPServerDisconnected, OSError) as e:
-            print(f"❌ [FEE EMAIL] NETWORK ERROR (Attempt {attempt+1}): {e}")
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            print("⚠️ Email failed after retries - enquiry will still be saved")
-            return False
-            
-        except Exception as e:
-            print(f"❌ [FEE EMAIL] ERROR (Attempt {attempt+1}): {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            return False
-    
-    return False
+        
+        msg.attach(MIMEText(text_body, 'plain', 'utf-8'))
+        msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+        
+        # 🔐 Use SMTP_SSL directly on port 465
+        server = smtplib.SMTP_SSL(email_host, email_port, timeout=30)
+        server.login(sender_email, sender_password.strip())
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ [FEE EMAIL] SUCCESS: Sent fee enquiry {enquiry_id} to {receiver_email}")
+        return True
+        
+    except smtplib.SMTPAuthenticationError as e:
+        print(f"❌ [FEE EMAIL] AUTH ERROR: {e}")
+        print("💡 FIX: Regenerate Gmail App Password")
+        return False
+    except OSError as e:
+        print(f"❌ [FEE EMAIL] NETWORK ERROR: {e}")
+        print("💡 FIX: Render may block SMTP. Try Resend/SendGrid.")
+        return False
+    except Exception as e:
+        print(f"❌ [FEE EMAIL] ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 # ============================================================================
 # FLASK ROUTES
@@ -1513,7 +1472,7 @@ def submit_service_enquiry():
 
 @app.route("/submit-fee-enquiry", methods=["POST"])
 def submit_fee_enquiry():
-    """Handle fee enquiry submission - Database first, email second"""
+    """Handle fee enquiry submission - FIXED: Database first, email second"""
     try:
         data = request.json
         print(f"💰 Received fee enquiry: {data}")
@@ -1567,12 +1526,11 @@ def submit_fee_enquiry():
             import traceback
             traceback.print_exc()
         
-        # STEP 2: Send email (don't fail if email fails)
+        # STEP 2: Send email
         try:
             send_fee_enquiry_email(data, enquiry_id)
         except Exception as e:
             print(f"❌ Email error (continuing anyway): {e}")
-        # Email result is logged but doesn't affect response
         
         # STEP 3: Log to Google Sheets
         try:
