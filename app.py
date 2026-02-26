@@ -1672,7 +1672,7 @@ def request_download():
             pending_downloads[download_token] = {
                 'data': data, 
                 'download_id': download_id, 
-                'created_at': datetime.now(timezone(timedelta(hours=5, minutes=30))),  # ✅ IST Time
+                'created_at': get_ist_now(),  # ✅ Returns naive datetime in IST  # ✅ IST Time
                 'ip': ip_address
             }
         
