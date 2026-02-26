@@ -1,7 +1,4 @@
-# ============================================================================
-# SLCI Chatbot - Flask App (Python 3.14.3 Compatible)
-# All original functionality preserved + psycopg 3.x for Python 3.14 support
-# ============================================================================
+
 import sys
 import os
 import re
@@ -12,7 +9,7 @@ import hmac
 import secrets
 import time
 import smtplib
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from functools import wraps
 from threading import Lock
 
@@ -27,7 +24,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 import requests
 from bs4 import BeautifulSoup
 
-# ✅ psycopg 3.x imports (Python 3.14 compatible - replaces psycopg2)
+# ✅ psycopg 3.x imports (Python 3.14 compatible)
 import psycopg
 from psycopg_pool import ConnectionPool
 
@@ -45,7 +42,7 @@ from reportlab.lib.utils import ImageReader
 import gspread
 from google.oauth2.service_account import Credentials
 
-# Add these missing imports
+# Email imports
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from werkzeug.utils import secure_filename
@@ -85,13 +82,15 @@ GOOGLE_CREDENTIALS_PATH = os.getenv('GOOGLE_CREDENTIALS_PATH', 'credentials.json
 GOOGLE_SHEET_ENABLED = os.getenv('GOOGLE_SHEET_ENABLED', 'true').lower() == 'true'
 
 # ============================================================================
-# DATABASE CONNECTION POOL (psycopg 3.x compatible)
+# TIMEZONE HELPER (IST - Indian Standard Time)
 # ============================================================================
+def get_ist_now():
+    """Returns current datetime in IST (UTC+5:30) as naive datetime for DB storage"""
+    ist = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(ist).replace(tzinfo=None)
+
 # ============================================================================
-# DATABASE CONNECTION POOL (psycopg 3.x compatible) - ENHANCED FOR RENDER
-# ============================================================================
-# ============================================================================
-# DATABASE CONNECTION POOL (psycopg 3.x compatible) - COMPLETELY FIXED
+# DATABASE CONNECTION POOL - FIXED & COMPLETE
 # ============================================================================
 db_pool = None  # Module level variable
 
@@ -153,8 +152,11 @@ def get_db_pool():
     
     return db_pool
 
+# ============================================================================
+# DATABASE INITIALIZATION
+# ============================================================================
 def init_db():
-    """Create all tables if they don't exist"""
+    """Create all tables if they don't exist - UPDATED: Removed DEFAULT CURRENT_TIMESTAMP"""
     try:
         print("📊 Initializing database tables...")
         
@@ -163,7 +165,6 @@ def init_db():
             print("❌ Cannot initialize DB - no connection pool")
             return False
         
-        # Use context manager - automatically handles connection return to pool
         with pool.connection() as conn:
             with conn.cursor() as cur:
                 # Create downloads table
@@ -180,7 +181,7 @@ def init_db():
                         act_type TEXT NOT NULL,
                         ip_address TEXT,
                         user_agent TEXT,
-                        download_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        download_date TIMESTAMP,
                         pdf_generated BOOLEAN DEFAULT FALSE,
                         pdf_path TEXT
                     )
@@ -199,7 +200,7 @@ def init_db():
                         query TEXT NOT NULL,
                         ip_address TEXT,
                         status TEXT DEFAULT 'pending',
-                        submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        submission_date TIMESTAMP,
                         email_sent BOOLEAN DEFAULT TRUE,
                         notes TEXT
                     )
@@ -217,7 +218,7 @@ def init_db():
                         description TEXT NOT NULL,
                         ip_address TEXT,
                         status TEXT DEFAULT 'pending',
-                        submission_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        submission_date TIMESTAMP,
                         email_sent BOOLEAN DEFAULT TRUE,
                         notes TEXT
                     )
@@ -230,7 +231,7 @@ def init_db():
                         state TEXT NOT NULL,
                         act_type TEXT NOT NULL,
                         download_count INTEGER DEFAULT 0,
-                        last_download TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_download TIMESTAMP,
                         UNIQUE(state, act_type)
                     )
                 """)
@@ -243,7 +244,7 @@ def init_db():
                 
                 conn.commit()
                 
-                # Verify tables were created
+                # Verify tables
                 cur.execute("""
                     SELECT table_name 
                     FROM information_schema.tables 
@@ -261,8 +262,9 @@ def init_db():
         traceback.print_exc()
         return False
 
-# ⚠️ DEPRECATED - Avoid using these functions directly
-# Use 'with pool.connection() as conn:' instead
+# ============================================================================
+# DEPRECATED CONNECTION FUNCTIONS (for backward compatibility)
+# ============================================================================
 def get_db_connection():
     """DEPRECATED: Use pool.connection() context manager instead"""
     global db_pool
@@ -277,14 +279,15 @@ def get_db_connection():
 
 def release_db_connection(conn):
     """DEPRECATED: Use pool.connection() context manager instead"""
-    global db_pool  # ← FIXED: Added global
+    global db_pool
     if conn and db_pool:
         try:
             db_pool.putconn(conn)
         except Exception as e:
             print(f"⚠️ Error releasing connection: {e}")
+
 # ============================================================================
-# GOOGLE SHEETS CONNECTION - PRODUCTION READY (gspread 5.x compatible)
+# GOOGLE SHEETS CONNECTION
 # ============================================================================
 gs_client = None
 gs_lock = Lock()
@@ -297,6 +300,7 @@ def get_google_sheet_client():
             if not os.path.exists(GOOGLE_CREDENTIALS_PATH):
                 print(f"❌ Google credentials file NOT FOUND: {os.path.abspath(GOOGLE_CREDENTIALS_PATH)}")
                 return None
+            
             try:
                 with open(GOOGLE_CREDENTIALS_PATH, 'r') as f:
                     f.read(1)
@@ -306,12 +310,14 @@ def get_google_sheet_client():
             except Exception as e:
                 print(f"❌ Cannot read credentials file: {e}")
                 return None
+            
             scopes = [
                 'https://www.googleapis.com/auth/spreadsheets',
                 'https://www.googleapis.com/auth/drive.file'
             ]
             creds = Credentials.from_service_account_file(GOOGLE_CREDENTIALS_PATH, scopes=scopes)
             gs_client = gspread.authorize(creds)
+            
             try:
                 spreadsheet = gs_client.open_by_key(GOOGLE_SHEET_ID)
                 print(f"✅ Google Sheets connected: {spreadsheet.title}")
@@ -325,12 +331,19 @@ def get_google_sheet_client():
                 print(f"❌ Google Sheets API Error: {e}")
                 gs_client = None
                 return None
+            except Exception as e:
+                print(f"❌ Google Sheets init error: {type(e).__name__}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                gs_client = None
+                return None
         except Exception as e:
             print(f"❌ Google Sheets init error: {type(e).__name__}: {str(e)}")
             import traceback
             traceback.print_exc()
             gs_client = None
             return None
+    
     return gs_client
 
 def _get_sheet_headers(sheet_name):
@@ -347,31 +360,38 @@ def append_to_google_sheet(sheet_name, data_row):
     """Append data row to Google Sheet - Production ready with retry logic"""
     if not GOOGLE_SHEET_ENABLED:
         return False
+    
     try:
         client = get_google_sheet_client()
         if not client:
             print("⚠️ Google Sheets client unavailable - skipping sheet logging")
             return False
+        
         try:
             spreadsheet = client.open_by_key(GOOGLE_SHEET_ID)
         except gspread.exceptions.SpreadsheetNotFound:
             print(f"❌ Spreadsheet not found: {GOOGLE_SHEET_ID}")
             return False
+        
         try:
             worksheet = spreadsheet.worksheet(sheet_name)
         except gspread.exceptions.WorksheetNotFound:
             worksheet = spreadsheet.add_worksheet(title=sheet_name, rows=2000, cols=30)
             print(f"✅ Created new worksheet: {sheet_name}")
+        
         headers = _get_sheet_headers(sheet_name)
         if headers and not worksheet.row_values(1):
             worksheet.append_row(headers, value_input_option='USER_ENTERED')
             print(f"✅ Added headers to {sheet_name}")
+        
         normalized_data = {}
         for key, value in data_row.items():
             normalized_key = key.lower().replace(' ', '_')
             normalized_data[normalized_key] = value if value is not None else ''
+        
         if 'timestamp' not in normalized_data:
-            normalized_data['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            normalized_data['timestamp'] = get_ist_now().strftime('%Y-%m-%d %H:%M:%S')
+        
         sheet_headers = [h.lower().replace(' ', '_') for h in worksheet.row_values(1)]
         row_values = []
         for header in sheet_headers:
@@ -379,6 +399,7 @@ def append_to_google_sheet(sheet_name, data_row):
             if isinstance(value, (dict, list)):
                 value = json.dumps(value)
             row_values.append(str(value).strip())
+        
         with gs_lock:
             for attempt in range(3):
                 try:
@@ -397,24 +418,15 @@ def append_to_google_sheet(sheet_name, data_row):
                     if attempt == 2:
                         raise
                     time.sleep(1)
+        
         return True
-    except gspread.exceptions.SpreadsheetNotFound:
-        print(f"❌ Spreadsheet not found: {GOOGLE_SHEET_ID}")
-        return False
-    except gspread.exceptions.WorksheetNotFound:
-        print(f"❌ Worksheet not found: {sheet_name}")
-        return False
-    except gspread.exceptions.APIError as e:
-        print(f"❌ Google Sheets API Error: {e}")
-        return False
-    except PermissionError as e:
-        print(f"❌ File Permission Error: {e}")
-        return False
+        
     except Exception as e:
         print(f"❌ Google Sheets append error: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
+
 
 @app.route("/debug-sheets", methods=["GET"])
 def debug_sheets():
@@ -1371,7 +1383,7 @@ def check_recent_data():
 
 @app.route("/submit-service-enquiry", methods=["POST"])
 def submit_service_enquiry():
-    """Handle service enquiry submission - FIXED: Database first, email second"""
+    """Handle service enquiry submission - FIXED: Database first, email second, IST Time"""
     conn = None
     try:
         data = request.json
@@ -1395,8 +1407,12 @@ def submit_service_enquiry():
         # Generate enquiry ID
         enquiry_id = generate_enquiry_id("SER")
         
-        # STEP 1: Insert into database FIRST (independent of email)
+        # ========================================================================
+        # STEP 1: Insert into database FIRST with IST Time (independent of email)
+        # ========================================================================
         db_success = False
+        ist_time = get_ist_now()  # ✅ Get IST Time (UTC+5:30)
+        
         try:
             pool = get_db_pool()
             if pool:
@@ -1404,8 +1420,9 @@ def submit_service_enquiry():
                     with conn.cursor() as cur:
                         cur.execute("""
                             INSERT INTO service_enquiries 
-                            (enquiry_id, full_name, company_name, email, contact_number, service, query, ip_address, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            (enquiry_id, full_name, company_name, email, contact_number, 
+                             service, query, ip_address, status, submission_date)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (
                             enquiry_id,
                             data['fullName'],
@@ -1415,11 +1432,12 @@ def submit_service_enquiry():
                             data['service'],
                             data['query'],
                             request.remote_addr,
-                            'pending'
+                            'pending',
+                            ist_time  # ✅ IST Time pass kiya
                         ))
                         conn.commit()
                         db_success = True
-                        print(f"✅ Database insert successful: {enquiry_id}")
+                        print(f"✅ Database insert successful: {enquiry_id} at {ist_time} IST")
             else:
                 print("⚠️ No database pool available")
         except Exception as e:
@@ -1427,17 +1445,17 @@ def submit_service_enquiry():
             import traceback
             traceback.print_exc()
         
-        # STEP 2: Send email (don't fail if email fails)
+        # STEP 2: Send email (don't fail if email fails) - Updated with IST Time
         email_sent = False
         try:
-            email_sent = send_service_enquiry_email(data, enquiry_id)
+            email_sent = send_service_enquiry_email(data, enquiry_id, ist_time)  # ✅ Pass IST time to email
         except Exception as e:
             print(f"❌ Email error (continuing anyway): {e}")
         
-        # STEP 3: Log to Google Sheets
+        # STEP 3: Log to Google Sheets - Updated with IST Time
         try:
             sheet_data = {
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'timestamp': ist_time.strftime('%Y-%m-%d %H:%M:%S'),  # ✅ IST Time for Google Sheets
                 'enquiry_id': enquiry_id,
                 'full_name': data['fullName'],
                 'company_name': data['companyName'],
@@ -1472,7 +1490,7 @@ def submit_service_enquiry():
 
 @app.route("/submit-fee-enquiry", methods=["POST"])
 def submit_fee_enquiry():
-    """Handle fee enquiry submission - FIXED: Database first, email second"""
+    """Handle fee enquiry submission - FIXED: Database first, email second, IST Time"""
     try:
         data = request.json
         print(f"💰 Received fee enquiry: {data}")
@@ -1495,8 +1513,12 @@ def submit_fee_enquiry():
         # Generate enquiry ID
         enquiry_id = generate_enquiry_id("FEE")
         
-        # STEP 1: Insert into database FIRST
+        # ========================================================================
+        # STEP 1: Insert into database FIRST with IST Time
+        # ========================================================================
         db_success = False
+        ist_time = get_ist_now()  # ✅ Get IST Time (UTC+5:30)
+        
         try:
             pool = get_db_pool()
             if pool:
@@ -1504,8 +1526,9 @@ def submit_fee_enquiry():
                     with conn.cursor() as cur:
                         cur.execute("""
                             INSERT INTO fee_enquiries 
-                            (enquiry_id, full_name, company_name, email, contact_number, description, ip_address, status)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                            (enquiry_id, full_name, company_name, email, contact_number, 
+                             description, ip_address, status, submission_date)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, (
                             enquiry_id,
                             data['fullName'],
@@ -1514,11 +1537,12 @@ def submit_fee_enquiry():
                             data['contactNumber'],
                             data['description'],
                             request.remote_addr,
-                            'pending'
+                            'pending',
+                            ist_time  # ✅ IST Time pass kiya
                         ))
                         conn.commit()
                         db_success = True
-                        print(f"✅ Database insert successful: {enquiry_id}")
+                        print(f"✅ Database insert successful: {enquiry_id} at {ist_time} IST")
             else:
                 print("⚠️ No database pool available")
         except Exception as e:
@@ -1526,16 +1550,16 @@ def submit_fee_enquiry():
             import traceback
             traceback.print_exc()
         
-        # STEP 2: Send email
+        # STEP 2: Send email - Updated with IST Time
         try:
-            send_fee_enquiry_email(data, enquiry_id)
+            send_fee_enquiry_email(data, enquiry_id, ist_time)  # ✅ Pass IST time to email
         except Exception as e:
             print(f"❌ Email error (continuing anyway): {e}")
         
-        # STEP 3: Log to Google Sheets
+        # STEP 3: Log to Google Sheets - Updated with IST Time
         try:
             sheet_data = {
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'timestamp': ist_time.strftime('%Y-%m-%d %H:%M:%S'),  # ✅ IST Time for Google Sheets
                 'enquiry_id': enquiry_id,
                 'full_name': data['fullName'],
                 'company_name': data['companyName'],
@@ -1569,7 +1593,7 @@ def submit_fee_enquiry():
 
 @app.route("/request-download", methods=["POST"])
 def request_download():
-    """Step 1: Validate form, log to DB, return download token"""
+    """Step 1: Validate form, log to DB, return download token - UPDATED with IST Time"""
     try:
         data = request.json
         print(f"📥 Received download request: {data}")
@@ -1593,8 +1617,12 @@ def request_download():
         ip_address = request.remote_addr
         user_agent = request.headers.get('User-Agent')
         
-        # Log to database
+        # ========================================================================
+        # Log to database with IST Time
+        # ========================================================================
         download_id = None
+        ist_time = get_ist_now()  # ✅ Get IST Time (UTC+5:30)
+        
         try:
             pool = get_db_pool()
             if pool:
@@ -1602,8 +1630,9 @@ def request_download():
                     with conn.cursor() as cur:
                         cur.execute("""
                             INSERT INTO downloads 
-                            (full_name, company_name, email, contact_number, designation, rating, state, act_type, ip_address, user_agent)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            (full_name, company_name, email, contact_number, designation, 
+                             rating, state, act_type, ip_address, user_agent, download_date)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                             RETURNING id
                         """, (
                             data['fullName'], 
@@ -1615,21 +1644,24 @@ def request_download():
                             data['state'], 
                             data['actType'], 
                             ip_address, 
-                            user_agent
+                            user_agent,
+                            ist_time  # ✅ IST Time pass kiya
                         ))
                         download_id = cur.fetchone()[0]
                         
-                        # Update stats
+                        # Update stats with IST Time
                         cur.execute("""
                             INSERT INTO download_stats (state, act_type, download_count, last_download)
-                            VALUES (%s, %s, 1, CURRENT_TIMESTAMP)
+                            VALUES (%s, %s, 1, %s)
                             ON CONFLICT(state, act_type) DO UPDATE 
                             SET download_count = download_stats.download_count + 1, 
-                                last_download = CURRENT_TIMESTAMP
-                        """, (data['state'], data['actType']))
+                                last_download = %s
+                        """, (data['state'], data['actType'], ist_time, ist_time))
                         
                         conn.commit()
-                        print(f"✅ Download logged: ID {download_id}")
+                        print(f"✅ Download logged: ID {download_id} at {ist_time} IST")
+            else:
+                print("⚠️ No database pool available")
         except Exception as e:
             print(f"❌ Download logging error: {e}")
             import traceback
@@ -1640,7 +1672,7 @@ def request_download():
             pending_downloads[download_token] = {
                 'data': data, 
                 'download_id': download_id, 
-                'created_at': datetime.now(), 
+                'created_at': datetime.now(timezone(timedelta(hours=5, minutes=30))),  # ✅ IST Time
                 'ip': ip_address
             }
         
