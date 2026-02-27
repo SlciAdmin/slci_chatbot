@@ -667,293 +667,66 @@ def generate_pdf(token):
 # ============================================================================
 # PDF CREATION FUNCTION
 # ============================================================================
-# ============================================================================
-# FIXED PROFESSIONAL PDF CREATION FUNCTION
-# ============================================================================
 def create_pdf_file(state, act_type, tables_data, effective_date, download_id=None):
-    """Generate professional PDF with proper header: logo left, company name centered and bold"""
+    """Generate PDF with consistent header, watermark, and footer for ALL act types"""
     output = io.BytesIO()
-    
-    # Create PDF document with professional margins
-    doc = SimpleDocTemplate(
-        output, 
-        pagesize=A4,
-        rightMargin=72,  # 1 inch = 72 points
-        leftMargin=72,
-        topMargin=72,
-        bottomMargin=72
-    )
-    
+    doc = SimpleDocTemplate(output, pagesize=A4, rightMargin=50, leftMargin=50, topMargin=40, bottomMargin=50)
     elements = []
     styles = getSampleStyleSheet()
-    
-    # ========================================================================
-    # PROFESSIONAL HEADER WITH LOGO LEFT AND COMPANY NAME CENTERED
-    # ========================================================================
-    header_data = []
-    
-    # Try to load logo
-    logo_path = COMPANY_LOGO_PATH
-    logo_element = None
-    
-    if os.path.exists(logo_path):
-        try:
-            logo = Image(logo_path, width=60, height=60)
-            logo_element = logo
-        except Exception as e:
-            print(f"⚠️ Logo load error: {e}")
-            logo_element = Paragraph("", styles['Normal'])
-    else:
-        logo_element = Paragraph("", styles['Normal'])
-    
-    # Create centered company name with bold styling
-    company_style = ParagraphStyle(
-        'CompanyName',
-        parent=styles['Heading1'],
-        fontSize=20,
-        textColor=colors.HexColor('#1a237e'),
-        alignment=TA_CENTER,  # Center alignment
-        fontName='Helvetica-Bold',  # Bold font
-        spaceAfter=0,
-        leading=24
-    )
-    
-    company_name = Paragraph(f"{COMPANY_NAME}", company_style)
-    
-    # Create 3-column layout: [Logo][Company Name][Empty for balance]
-    header_data.append([logo_element, company_name, Paragraph("", styles['Normal'])])
-    
-    # Create header table with proportional widths
-    header_table = Table(header_data, colWidths=[80, 380, 80])
-    header_table.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (0, 0), 'LEFT'),  # Logo left
-        ('ALIGN', (1, 0), (1, 0), 'CENTER'),  # Company name center
-        ('ALIGN', (2, 0), (2, 0), 'RIGHT'),  # Empty right
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-    ]))
-    
-    elements.append(header_table)
-    
-    # Add decorative line under header
-    line_style = TableStyle([
-        ('LINEBELOW', (0, 0), (-1, -1), 2, colors.HexColor('#1a237e')),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    ])
-    line_table = Table([[""]], colWidths=[540])
-    line_table.setStyle(line_style)
-    elements.append(line_table)
-    elements.append(Spacer(1, 20))
-    
-    # ========================================================================
-    # DOCUMENT TITLE
-    # ========================================================================
+    build_pdf_header(elements, styles)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading2'], fontSize=16, alignment=TA_CENTER, spaceAfter=10, textColor=colors.HexColor('#283593'), fontName='Helvetica-Bold')
+    date_style = ParagraphStyle('DateStyle', parent=styles['Normal'], fontSize=10, alignment=TA_CENTER, spaceAfter=20, textColor=colors.HexColor('#2e7d32'), fontName='Helvetica-Bold')
+    header_style = ParagraphStyle('HeaderStyle', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER, textColor=colors.white, fontName='Helvetica-Bold')
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, fontName='Helvetica')
     display_name = act_type.replace('_', ' ').title()
-    
-    title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Heading2'],
-        fontSize=16,
-        alignment=TA_CENTER,
-        spaceAfter=10,
-        textColor=colors.HexColor('#283593'),
-        fontName='Helvetica-Bold'
-    )
-    
     elements.append(Paragraph(f"<b>{display_name} – {state.title()}</b>", title_style))
-    
-    # Effective date if available
     if effective_date:
-        date_style = ParagraphStyle(
-            'EffectiveDate',
-            parent=styles['Normal'],
-            fontSize=11,
-            alignment=TA_CENTER,
-            spaceAfter=20,
-            textColor=colors.HexColor('#2e7d32'),
-            fontName='Helvetica-Bold'
-        )
         elements.append(Paragraph(f"<b>Effective Date: {effective_date}</b>", date_style))
-    
-    elements.append(Spacer(1, 15))
-    
-    # ========================================================================
-    # TABLES - PROFESSIONAL STYLING
-    # ========================================================================
+    elements.append(Spacer(1, 10))
     if tables_data:
-        for table_idx, table_data in enumerate(tables_data):
-            if not table_data or len(table_data) < 1:
+        for table_data in tables_data:
+            if not table_data:
                 continue
-            
-            # Add table title if multiple tables
-            if len(tables_data) > 1:
-                table_title_style = ParagraphStyle(
-                    'TableTitle',
-                    parent=styles['Normal'],
-                    fontSize=12,
-                    textColor=colors.HexColor('#1a237e'),
-                    fontName='Helvetica-Bold',
-                    spaceAfter=8
-                )
-                elements.append(Paragraph(f"Table {table_idx + 1}", table_title_style))
-            
-            # Prepare table data with proper formatting
             pdf_table_data = []
-            col_count = len(table_data[0]) if table_data else 0
-            
             for row_idx, row in enumerate(table_data):
                 pdf_row = []
                 for cell in row:
                     cell_text = str(cell).strip()
                     if cell_text:
-                        # Create paragraph with appropriate style
                         if row_idx == 0:
-                            # Header row
-                            cell_para = Paragraph(
-                                cell_text,
-                                ParagraphStyle(
-                                    'TableHeader',
-                                    parent=styles['Normal'],
-                                    fontSize=9,
-                                    alignment=TA_CENTER,
-                                    textColor=colors.white,
-                                    fontName='Helvetica-Bold',
-                                    leading=11
-                                )
-                            )
+                            pdf_row.append(Paragraph(cell_text, header_style))
                         else:
-                            # Data row
-                            cell_para = Paragraph(
-                                cell_text,
-                                ParagraphStyle(
-                                    'TableCell',
-                                    parent=styles['Normal'],
-                                    fontSize=8,
-                                    alignment=TA_CENTER,
-                                    fontName='Helvetica',
-                                    leading=10
-                                )
-                            )
-                        pdf_row.append(cell_para)
+                            pdf_row.append(Paragraph(cell_text, cell_style))
                     else:
                         pdf_row.append("")
                 pdf_table_data.append(pdf_row)
-            
-            # Calculate column widths
-            if col_count > 0:
-                col_widths = [doc.width / col_count] * col_count
-            else:
-                col_widths = [doc.width]
-            
-            # Create table
+            col_count = len(table_data[0]) if table_data else 0
+            col_widths = [doc.width / col_count] * col_count if col_count else [doc.width]
             pdf_table = Table(pdf_table_data, colWidths=col_widths, repeatRows=1)
-            
-            # Professional table styling
             table_style = TableStyle([
-                # Header styling
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1a237e')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 9),
-                
-                # Grid styling
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cccccc')),
-                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#1a237e')),
-                
-                # Padding
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                ('TOPPADDING', (0, 0), (-1, -1), 6),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-                
-                # Alternating row colors
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f7fa')]),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e0e0e0')),
+                ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ])
-            
+            for i in range(1, len(table_data)):
+                if i % 2 == 0:
+                    table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#f5f7fa'))
             pdf_table.setStyle(table_style)
             elements.append(pdf_table)
-            elements.append(Spacer(1, 20))
-    else:
-        # No data message
-        no_data_style = ParagraphStyle(
-            'NoData',
-            parent=styles['Normal'],
-            fontSize=12,
-            alignment=TA_CENTER,
-            textColor=colors.HexColor('#666666'),
-            spaceAfter=20
-        )
-        elements.append(Paragraph("No tabular data available for this act.", no_data_style))
-    
-    # ========================================================================
-    # FOOTER WITH GENERATION INFO AND COMPANY DETAILS
-    # ========================================================================
-    elements.append(Spacer(1, 30))
-    
-    # Add horizontal line
-    footer_line = Table([[""]], colWidths=[540])
-    footer_line.setStyle(TableStyle([
-        ('LINEABOVE', (0, 0), (-1, -1), 1, colors.HexColor('#cccccc')),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    ]))
-    elements.append(footer_line)
-    elements.append(Spacer(1, 10))
-    
-    # Footer text
-    footer_style = ParagraphStyle(
-        'Footer',
-        parent=styles['Normal'],
-        fontSize=8,
-        alignment=TA_CENTER,
-        textColor=colors.grey,
-        fontName='Helvetica'
-    )
-    
-    current_time = datetime.now().strftime('%d %B %Y | %I:%M %p')
-    
-    elements.append(Paragraph(f"Generated on {current_time}", footer_style))
+            elements.append(Spacer(1, 15))
+    footer_style = ParagraphStyle('FooterStyle', parent=styles['Normal'], fontSize=8, alignment=TA_CENTER, textColor=colors.grey)
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph(f"Generated on {datetime.now().strftime('%d %B %Y | %I:%M %p')}", footer_style))
     elements.append(Paragraph("Shakti Legal Compliance India | www.slci.in", footer_style))
-    
-    if download_id:
-        elements.append(Paragraph(f"Reference ID: {download_id}", footer_style))
-    
-    # ========================================================================
-    # BUILD PDF WITH WATERMARK
-    # ========================================================================
-    def add_professional_watermark(canvas, doc):
-        """Add subtle watermark to PDF pages"""
-        canvas.saveState()
-        try:
-            if os.path.exists(COMPANY_LOGO_PATH):
-                img = ImageReader(COMPANY_LOGO_PATH)
-                page_width, page_height = doc.pagesize
-                
-                # Place watermark diagonally
-                watermark_width = page_width * 0.5
-                watermark_height = watermark_width
-                
-                # Position in center
-                x = (page_width - watermark_width) / 2
-                y = (page_height - watermark_height) / 2
-                
-                canvas.setFillAlpha(0.05)  # Very subtle
-                canvas.drawImage(img, x, y, 
-                               width=watermark_width, 
-                               height=watermark_height, 
-                               preserveAspectRatio=True, 
-                               mask='auto')
-        except Exception as e:
-            print(f"⚠️ Watermark error: {e}")
-        canvas.restoreState()
-    
-    # Build PDF with watermark
-    doc.build(elements, onFirstPage=add_professional_watermark, onLaterPages=add_professional_watermark)
-    
+    doc.build(elements, onFirstPage=add_watermark, onLaterPages=add_watermark)
     output.seek(0)
     return output
 
@@ -1172,165 +945,41 @@ def test_db_connection():
         }), 500
 
 def fetch_working_hours(state):
-    """Improved working hours fetch with better error handling and data extraction"""
     try:
-        # Normalize state name for URL
-        state_key = state.lower().strip()
-        url = STATE_WORKING_HOURS_URLS.get(state_key)
-        
+        url = STATE_WORKING_HOURS_URLS.get(state)
         if not url:
-            print(f"⚠️ No URL found for state: {state}")
-            # Try to find by partial match
-            for s, u in STATE_WORKING_HOURS_URLS.items():
-                if state_key in s or s in state_key:
-                    url = u
-                    state_key = s
-                    break
-            
-            if not url:
-                return {
-                    "html": f"<div class='error-message'>No working hours data available for {state.title()}</div>",
-                    "tables_data": [],
-                    "state": state,
-                    "act_type": "Working_Hours",
-                    "effective_date": None
-                }
-        
-        print(f"📊 Fetching working hours for {state_key} from {url}")
-        
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        
-        response = requests.get(url, timeout=15, headers=headers)
-        response.raise_for_status()
-        
+            return None
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, timeout=10, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
-        
-        # Extract effective date
         effective_date = extract_effective_date(soup)
-        
-        # Extract all tables
         tables_data = extract_table_data(soup)
-        
-        # If no tables found, try to find data in divs
-        if not tables_data:
-            tables_data = extract_data_from_divs(soup)
-        
-        # Generate HTML for display
-        html_output = generate_working_hours_html(soup, tables_data, state_key, url)
-        
-        # Generate state display name
-        state_display = state_key.title()
-        
-        return {
-            "html": html_output,
-            "tables_data": tables_data,
-            "state": state_display,
-            "act_type": "Working_Hours",
-            "effective_date": effective_date,
-            "source_url": url
-        }
-        
-    except requests.RequestException as e:
-        print(f"❌ Network error fetching working hours for {state}: {str(e)}")
-        return {
-            "html": f"<div class='error-message'>Unable to fetch working hours data. Please try again later.</div>",
-            "tables_data": [],
-            "state": state,
-            "act_type": "Working_Hours",
-            "effective_date": None
-        }
+        tables = soup.find_all("table")
+        html_output = ""
+        if tables:
+            for idx, table in enumerate(tables, 1):
+                rows = table.find_all("tr")
+                html_output += f"<h4>Working Hours – Table {idx}</h4>"
+                html_output += '<table class="minimum-wage-table">'
+                for row in rows:
+                    cols = row.find_all(["td", "th"])
+                    html_output += "<tr>"
+                    for col in cols:
+                        text = col.get_text(strip=True)
+                        tag = "th" if col.name == "th" else "td"
+                        html_output += f"<{tag}>{text}</{tag}>"
+                    html_output += "</tr>"
+                html_output += "</table>"
+        else:
+            html_output = "<p>No working hours table found.</p>"
+        state_encoded = state.replace(" ", "_")
+        download_button = f'<div style="text-align:right; margin:15px 0;"><button onclick="openDownloadModal(\'{state_encoded}\', \'working_hours\')" class="download-pdf-btn"><i class="fas fa-file-pdf"></i> Download Working Hours PDF</button></div>'
+        date_header = f'<div class="effective-date-banner"><div class="date-content"><i class="fas fa-calendar-check"></i><span class="date-label">EFFECTIVE DATE:</span><span class="date-value">{effective_date}</span></div></div>' if effective_date else '<div class="effective-date-banner warning"><div class="date-content"><i class="fas fa-exclamation-triangle"></i><span class="date-label">EFFECTIVE DATE:</span><span class="date-value">Check on website</span></div></div>'
+        final_html = f"""<div><h3>Working Hours – {state.title()}</h3>{date_header}{download_button}{html_output}<div style="margin-top:20px; font-size:12px; color:#666; text-align:center; border-top:1px solid #ccc; padding-top:15px;">Source: <a href="{url}" target="_blank">{url}</a></div></div>"""
+        return {"html": final_html, "tables_data": tables_data, "state": state, "act_type": "Working_Hours", "effective_date": effective_date}
     except Exception as e:
-        print(f"❌ Unexpected error fetching working hours for {state}: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "html": f"<div class='error-message'>Error loading working hours data.</div>",
-            "tables_data": [],
-            "state": state,
-            "act_type": "Working_Hours",
-            "effective_date": None
-        }
-def extract_data_from_divs(soup):
-    """Extract tabular data from div structures when tables are not present"""
-    tables_data = []
-    
-    # Look for divs with tabular structure
-    grid_patterns = [
-        'table-responsive',
-        'grid-view',
-        'data-grid',
-        'working-hours-grid',
-        'shop-hours'
-    ]
-    
-    for pattern in grid_patterns:
-        containers = soup.find_all('div', class_=lambda c: c and pattern in c.lower())
-        
-        for container in containers:
-            # Try to find row-like structures
-            rows_data = []
-            items = container.find_all(['div', 'li'], recursive=True)
-            
-            current_row = []
-            for item in items[:20]:  # Limit to prevent huge datasets
-                text = item.get_text(strip=True)
-                if text and len(text) < 100:  # Filter out large text blocks
-                    current_row.append(text)
-                    if len(current_row) >= 4:  # Assume 4 columns
-                        rows_data.append(current_row)
-                        current_row = []
-            
-            if rows_data:
-                tables_data.append(rows_data)
-    
-    return tables_data
-def generate_working_hours_html(soup, tables_data, state, url):
-    """Generate HTML for working hours display"""
-    html_output = ""
-    
-    # Try to find descriptive content
-    content_divs = soup.find_all(['div', 'p', 'h2', 'h3'], class_=lambda c: c and any(
-        x in c.lower() for x in ['content', 'description', 'info', 'details']
-    ))
-    
-    for div in content_divs[:3]:
-        text = div.get_text(strip=True)
-        if text and len(text) > 50:  # Only add substantial content
-            html_output += f'<div class="info-content">{text}</div>'
-    
-    # Generate tables HTML
-    if tables_data:
-        for idx, table_data in enumerate(tables_data, 1):
-            if not table_data:
-                continue
-                
-            html_output += f'<h4 class="table-title">Working Hours - Table {idx}</h4>'
-            html_output += '<table class="working-hours-table">'
-            
-            for row_idx, row in enumerate(table_data):
-                html_output += "<tr>"
-                for col in row:
-                    cell_text = str(col).strip()
-                    tag = "th" if row_idx == 0 else "td"
-                    html_output += f"<{tag}>{cell_text}</{tag}>"
-                html_output += "</tr>"
-            html_output += "</table>"
-    else:
-        # If still no data, show basic info
-        html_output += """
-        <div class="no-data-message">
-            <p>Working hours information is available in structured format.</p>
-            <p>Please visit the source website for complete details.</p>
-        </div>
-        """
-    
-    # Add source link
-    html_output += f'<div class="source-link">Source: <a href="{url}" target="_blank">{url}</a></div>'
-    
-    return html_output
-
+        print(f"Working Hours Fetch Error: {e}")
+        return None
 
 def fetch_shop_establishment(state):
     """Fetch and filter Shop and Establishment Act data for specific state"""
