@@ -2058,7 +2058,7 @@ STATE_VARIATIONS = {
     "nagaland": ["nagaland", "kohima", "dimapur"],
     "odisha": ["odisha", "orissa", "bhubaneswar", "cuttack"],
     "pondicherry": ["pondicherry", "puducherry"],
-    "punjab": ["punjab", "chandigarh", "ludhiana", "amritsar", "jalandhar"],
+    "punjab": ["punjab"],
     "rajasthan": ["rajasthan", "jaipur", "jodhpur", "udaipur", "kota"],
     "sikkim": ["sikkim", "gangtok"],
     "tamil nadu": ["tamil nadu", "tamilnadu", "chennai", "madras", "coimbatore"],
