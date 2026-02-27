@@ -1870,6 +1870,9 @@ def health():
 # STATE URL DICTIONARIES (Complete List)
 # ============================================================================
 STATE_MINIMUM_WAGE_URLS = {
+    "arunchal pradesh": "https://www.slci.in/arunachal-pradesh/",
+    "dadra and nagar haveli": "https://www.slci.in/dadra-and-nagar-haveli/",
+    "andaman and nicobar": "andaman and nicobar",
     "delhi": "https://www.slci.in/minimum-wages/delhi/",
     "andhra pradesh": "https://www.slci.in/minimum-wages/andhra-pradesh/",
     "assam": "https://www.slci.in/minimum-wages/assam/",
