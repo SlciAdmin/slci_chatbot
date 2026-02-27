@@ -982,7 +982,7 @@ def fetch_working_hours(state):
         return None
 
 def fetch_shop_establishment(state):
-    """Fetch and filter Shop and Establishment Act data for specific state"""
+    """Fetch and filter Shop and Establishment Act data for specific state - FIXED"""
     try:
         url = SHOP_ESTABLISHMENT_MAIN_URL
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
@@ -990,36 +990,63 @@ def fetch_shop_establishment(state):
         soup = BeautifulSoup(response.text, "html.parser")
         tables_data = extract_table_data(soup)
         html_output = ""
+        
         if state is None or state.lower() == "all_states":
             html_output = "<h4>Select a State:</h4><ul style='columns:2; list-style-type:none; padding:0;'>"
             for s in sorted(STATE_VARIATIONS.keys()):
                 html_output += f"<li style='padding:8px; margin:5px; background:#f5f5f5; border-radius:5px;'>📍 {s.title()}</li>"
             html_output += "</ul>"
             return {"html": html_output, "tables_data": [], "state": "All States", "act_type": "Shop_and_Establishment", "effective_date": None}
+        
         filtered_tables = []
-        state_lower = state.lower()
+        state_lower = state.lower().strip()
+        
+        # Create exact match patterns for each state
+        exact_state_variations = STATE_VARIATIONS.get(state_lower, [state_lower])
+        
         if tables_data:
             for table in tables_data:
                 state_found = False
                 filtered_rows = []
-                for row in table:
-                    if row == table[0]:
+                
+                for row_idx, row in enumerate(table):
+                    if row_idx == 0:  # Keep header row
                         filtered_rows.append(row)
                         continue
+                    
                     row_text = ' '.join(str(cell).lower() for cell in row)
-                    if state_lower in row_text:
-                        state_found = True
-                        filtered_rows.append(row)
-                    else:
-                        for variation in STATE_VARIATIONS.get(state_lower, []):
-                            if variation in row_text:
+                    
+                    # FIX: Use exact matching instead of substring matching
+                    row_words = set(re.findall(r'\b\w+\b', row_text))
+                    
+                    for variation in exact_state_variations:
+                        variation_lower = variation.lower()
+                        
+                        # Check if variation exists as a whole word
+                        if (variation_lower in row_words or 
+                            f" {variation_lower} " in f" {row_text} " or
+                            variation_lower == row_text.strip()):
+                            state_found = True
+                            filtered_rows.append(row)
+                            break
+                        
+                        # Handle multi-word variations
+                        if ' ' in variation_lower:
+                            # For multi-word, check if all words appear in order
+                            if variation_lower in row_text:
                                 state_found = True
                                 filtered_rows.append(row)
                                 break
+                
                 if state_found and len(filtered_rows) > 1:
                     filtered_tables.append(filtered_rows)
+        
         if not filtered_tables:
-            html_output = f"""<div style="padding: 20px; text-align: center; background: #fff3cd; border-radius: 8px;"><i class="fas fa-info-circle" style="color: #856404;"></i><p style="color: #856404; margin-top: 10px;">No specific Shop & Establishment data found for <strong>{state.title()}</strong>.<br>Please check our main page for more details.</p></div>"""
+            html_output = f"""<div style="padding: 20px; text-align: center; background: #fff3cd; border-radius: 8px;">
+                <i class="fas fa-info-circle" style="color: #856404;"></i>
+                <p style="color: #856404; margin-top: 10px;">No specific Shop & Establishment data found for <strong>{state.title()}</strong>.<br>
+                Please check our main page for more details.</p>
+            </div>"""
         else:
             for idx, table_rows in enumerate(filtered_tables, 1):
                 html_output += f"<h4 style='color:#1a237e; margin:20px 0 10px;'>Shop & Establishment Act – {state.title()}</h4>"
@@ -1034,14 +1061,36 @@ def fetch_shop_establishment(state):
                         html_output += f"<{tag} style='border:1px solid #ddd; padding:8px; background-color:{bg_color}; color:{text_color}; text-align:left;'>{cell_text}</{tag}>"
                     html_output += "</tr>"
                 html_output += "</table>"
+        
         state_encoded = state.replace(" ", "_")
-        download_button = f'''<div style="text-align:right; margin:20px 0;"><button onclick="openDownloadModal('{state_encoded}', 'shop_establishment')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; display: inline-flex; align-items: center; gap: 8px;"><i class="fas fa-file-pdf"></i> Download PDF for {state.title()}</button></div>'''
-        final_html = f"""<div><h3 style="color:#1a237e; margin-bottom:15px;">🏢 Shop and Establishment Act – {state.title()}</h3>{download_button}{html_output}<div style="margin-top:30px; font-size:12px; color:#666; text-align:center; border-top:1px solid #ccc; padding-top:15px;">Source: <a href="{url}" target="_blank" style="color:#667eea;">slci.in/shops-and-establishments-act/</a></div></div>"""
+        download_button = f'''<div style="text-align:right; margin:20px 0;">
+            <button onclick="openDownloadModal('{state_encoded}', 'shop_establishment')" 
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; 
+                border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; 
+                display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-file-pdf"></i> Download PDF for {state.title()}
+            </button>
+        </div>'''
+        
+        final_html = f"""<div>
+            <h3 style="color:#1a237e; margin-bottom:15px;">🏢 Shop and Establishment Act – {state.title()}</h3>
+            {download_button}
+            {html_output}
+            <div style="margin-top:30px; font-size:12px; color:#666; text-align:center; border-top:1px solid #ccc; padding-top:15px;">
+                Source: <a href="{url}" target="_blank" style="color:#667eea;">slci.in/shops-and-establishments-act/</a>
+            </div>
+        </div>"""
+        
         return {"html": final_html, "tables_data": filtered_tables if filtered_tables else tables_data, "state": state, "act_type": "Shop_and_Establishment", "effective_date": None}
+    
     except Exception as e:
         print(f"Shop Establishment Fetch Error: {str(e)}")
-        return {"html": f"""<div style="padding: 20px; text-align: center; background: #f8d7da; border-radius: 8px;"><i class="fas fa-exclamation-triangle" style="color: #721c24;"></i><p style="color: #721c24; margin-top: 10px;">Error fetching Shop & Establishment data for {state.title()}.<br>Please try again later.</p></div>""", "tables_data": [], "state": state, "act_type": "Shop_and_Establishment", "effective_date": None}
-
+        return {"html": f"""<div style="padding: 20px; text-align: center; background: #f8d7da; border-radius: 8px;">
+            <i class="fas fa-exclamation-triangle" style="color: #721c24;"></i>
+            <p style="color: #721c24; margin-top: 10px;">Error fetching Shop & Establishment data for {state.title()}.<br>
+            Please try again later.</p>
+        </div>""", "tables_data": [], "state": state, "act_type": "Shop_and_Establishment", "effective_date": None}
+    
 def get_fast_response(query):
     try:
         prompt = f"Question about Indian labor law: {query}\nShort answer:"
