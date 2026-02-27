@@ -2085,7 +2085,7 @@ KEYWORDS = {
     "gratuity": ["gratuity", "gratuity amount", "gratuity calculation"],
     "bonus": ["bonus", "annual bonus", "bonus act"],
     "working hours": ["working hours", "work hours", "daily hours", "shift timing"],
-    "holiday list": ["holiday", "holiday list", "public holiday", "national holiday", "bank holiday"],
+    "holiday list": ["holiday", "holiday list", "public holiday", "national holiday", "bank holiday", "leaves"],
     "shop establishment": ["shop and establishment", "shop establishment act", "sea act", "commercial establishment", "shop license"],
     "pricing": ["pricing", "price", "cost", "fee", "fees", "charges", "how much", "quotation", "quote", "package", "plans", "subscription"],
     "fees": ["fees", "fee structure", "service fees", "consulting fees", "charges", "professional fees"],
