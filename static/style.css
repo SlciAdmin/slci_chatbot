@@ -916,3 +916,156 @@ body {
         font-size: 0.85rem;
     }
 }
+
+/* ============================================================================
+   NEW LABOUR CODES STYLES
+   ============================================================================ */
+.labour-code-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.labour-code-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.labour-code-header {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    color: white;
+    padding: 15px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+}
+
+.labour-code-header:hover {
+    background: linear-gradient(135deg, #283593 0%, #1a237e 100%);
+}
+
+.labour-code-header h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.labour-code-header i {
+    transition: transform 0.3s ease;
+}
+
+.labour-code-header.active i {
+    transform: rotate(90deg);
+}
+
+.labour-code-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: #f8f9fa;
+    padding: 0 20px;
+}
+
+.labour-code-body.active {
+    max-height: 500px;
+    padding: 20px;
+}
+
+.labour-code-features {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+}
+
+.labour-code-features li {
+    margin: 8px 0;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.labour-code-features li i {
+    color: #28a745;
+    font-size: 14px;
+}
+
+/* Labour Code Buttons */
+.labour-code-download-btn {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.labour-code-download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+.labour-code-comparison-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.labour-code-comparison-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+/* Labour Code Grid for Desktop */
+@media (min-width: 768px) {
+    .labour-codes-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+/* Labour Code Note in Modal */
+.labour-code-note {
+    animation: slideDown 0.3s ease;
+}
+
+/* Labour Code Badge */
+.labour-code-badge {
+    display: inline-block;
+    background: #28a745;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}

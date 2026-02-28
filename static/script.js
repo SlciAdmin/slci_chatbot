@@ -4,6 +4,16 @@ let currentDownloadData = {
     actType: null
 };
 
+// ============================================================================
+// NEW: Labour Codes Configuration (Added after currentDownloadData)
+// ============================================================================
+const NEW_LABOUR_CODES = {
+    'social_security': { title: 'Code on Social Security 2020' },
+    'industrial_relations': { title: 'Industrial Relations Code 2020' },
+    'code_on_wages': { title: 'Code on Wages 2019' },
+    'occupational_safety': { title: 'Occupational Safety, Health & Working Conditions Code 2020' }
+};
+
 // Initialize when page loads
 document.addEventListener('DOMContentLoaded', function() {
     initializeChat();
@@ -32,7 +42,7 @@ function initializeModal() {
     };
     const form = document.getElementById('downloadForm');
     if (form) form.addEventListener('submit', handleFormSubmit);
-}  
+}
 
 // ============================================================================
 // ENHANCED SERVICE MODAL INITIALIZATION WITH AUTO-FILL
@@ -40,21 +50,17 @@ function initializeModal() {
 function initializeServiceModal() {
     const serviceModal = document.getElementById('serviceModal');
     const closeServiceBtn = document.querySelector('.close-service-modal');
-    
     if (closeServiceBtn) {
         closeServiceBtn.onclick = () => closeServiceModal();
     }
-    
     const serviceCancelBtn = serviceModal?.querySelector('.modal-cancel-btn');
     if (serviceCancelBtn) {
         serviceCancelBtn.onclick = () => closeServiceModal();
     }
-    
     const serviceForm = document.getElementById('serviceForm');
     if (serviceForm) {
         serviceForm.addEventListener('submit', handleServiceSubmit);
     }
-    
     // Auto-fill form when modal opens using MutationObserver
     const modal = document.getElementById('serviceModal');
     const observer = new MutationObserver((mutations) => {
@@ -66,13 +72,10 @@ function initializeServiceModal() {
             }
         });
     });
-    
     observer.observe(modal, { attributes: true });
-    
     window.addEventListener('click', (event) => {
         if (event.target == serviceModal) closeServiceModal();
     });
-    
     // Add validation listeners
     const serviceInputs = document.querySelectorAll('#serviceForm input, #serviceForm textarea');
     serviceInputs.forEach(input => {
@@ -151,9 +154,7 @@ function validateField(field) {
     if (!field) return true;
     const value = field.value.trim();
     let isValid = true, errorMessage = '';
-    
     field.parentElement.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
-    
     switch(field.id) {
         case 'fullName':
             if (!value) { isValid = false; errorMessage = 'Full name is required'; }
@@ -177,7 +178,6 @@ function validateField(field) {
             if (!value) { isValid = false; errorMessage = 'Please select your designation'; }
             break;
     }
-    
     if (value && isValid) {
         const icon = document.createElement('i');
         icon.className = 'fas fa-check-circle validation-icon valid';
@@ -199,9 +199,7 @@ function validateServiceField(field) {
     if (!field) return true;
     const value = field.value.trim();
     let isValid = true, errorMessage = '';
-    
     field.parentElement.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
-    
     switch(field.id) {
         case 'serviceFullName':
             if (!value) { isValid = false; errorMessage = 'Full name is required'; }
@@ -226,7 +224,6 @@ function validateServiceField(field) {
             else if (value.length < 10) { isValid = false; errorMessage = 'Query must be at least 10 characters'; }
             break;
     }
-    
     if (value && isValid) {
         const icon = document.createElement('i');
         icon.className = 'fas fa-check-circle validation-icon valid';
@@ -251,9 +248,7 @@ function validateFeeField(field) {
     if (!field) return true;
     const value = field.value.trim();
     let isValid = true, errorMessage = '';
-    
     field.parentElement.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
-    
     switch(field.id) {
         case 'feeFullName':
             if (!value) { isValid = false; errorMessage = 'Full name is required'; }
@@ -278,7 +273,6 @@ function validateFeeField(field) {
             else if (value.length < 20) { isValid = false; errorMessage = 'Description must be at least 20 characters'; }
             break;
     }
-    
     if (value && isValid) {
         const icon = document.createElement('i');
         icon.className = 'fas fa-check-circle validation-icon valid';
@@ -363,18 +357,14 @@ function openDownloadModal(state, actType) {
 // ============================================================================
 function openServiceModal(serviceName) {
     console.log("Opening service modal for:", serviceName); // Debug log
-    
     const modal = document.getElementById('serviceModal');
     const selectedServiceInput = document.getElementById('selectedService');
-    
     if (!modal || !selectedServiceInput) {
         console.error("Modal elements not found!");
         return;
     }
-    
     // Set the service name
     selectedServiceInput.value = serviceName;
-    
     // Reset and clear form
     const form = document.getElementById('serviceForm');
     if (form) {
@@ -385,14 +375,11 @@ function openServiceModal(serviceName) {
             input.classList.remove('error');
         });
     }
-    
     // Auto-fill with saved data
     autoFillServiceForm();
-    
     // Show modal
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
-    
     // Focus on first field
     setTimeout(() => {
         const firstField = document.getElementById('serviceFullName');
@@ -436,11 +423,10 @@ function closeFeeModal() {
     document.body.style.overflow = 'auto';
 }
 
-// ✅ FIXED: Two-step PDF download flow
+// ✅ FIXED: Two-step PDF download flow with enhanced redirect logic
 async function handleFormSubmit(event) {
     event.preventDefault();
     if (!validateForm()) return;
-    
     showLoadingOverlay();
     
     const formData = {
@@ -473,8 +459,14 @@ async function handleFormSubmit(event) {
             };
             localStorage.setItem('lastDownload', JSON.stringify(downloadRecord));
             showSuccessMessage(data.downloadId);
+            
+            // ✅ UPDATED: Use the download URL if provided, otherwise fallback to generate-pdf
             setTimeout(() => {
-                window.location.href = `/generate-pdf/${data.downloadToken}`;
+                if (data.downloadUrl) {
+                    window.location.href = data.downloadUrl;
+                } else {
+                    window.location.href = `/generate-pdf/${data.downloadToken}`;
+                }
             }, 800);
         } else {
             throw new Error(data.error || 'Form submission failed');
@@ -512,27 +504,25 @@ async function handleServiceSubmit(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
-        
         const data = await response.json();
+        
         console.log("Service submission response:", data); // Debug log
         
         if (data.success) {
             closeServiceModal();
-            
             // Show success message in chat
             const successMessage = `
-            <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 10px; border-left: 4px solid #28a745;">
-                <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
-                <div style="margin-top: 10px;">
-                    <strong style="font-size: 16px; color: #155724;">✅ Enquiry Submitted Successfully!</strong>
-                    <p style="margin: 10px 0; color: #155724;">Thank you for your interest in: <strong>${formData.service}</strong></p>
-                    <p style="margin: 5px 0; color: #155724;">Reference ID: <strong>${data.enquiryId || 'N/A'}</strong></p>
-                    <p style="margin: 5px 0; color: #155724;">Our team will contact you within 24 hours.</p>
-                </div>
-            </div>
-            `;
+<div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 10px; border-left: 4px solid #28a745;">
+    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
+    <div style="margin-top: 10px;">
+        <strong style="font-size: 16px; color: #155724;">✅ Enquiry Submitted Successfully!</strong>
+        <p style="margin: 10px 0; color: #155724;">Thank you for your interest in: <strong>${formData.service}</strong></p>
+        <p style="margin: 5px 0; color: #155724;">Reference ID: <strong>${data.enquiryId || 'N/A'}</strong></p>
+        <p style="margin: 5px 0; color: #155724;">Our team will contact you within 24 hours.</p>
+    </div>
+</div>
+`;
             addMessage(successMessage, 'bot');
-            
             // Also show a notification
             showNotification('Enquiry submitted successfully! Check your email for confirmation.', 'success');
             
@@ -553,12 +543,134 @@ async function handleServiceSubmit(event) {
 }
 
 // ============================================================================
+// NEW LABOUR CODES FUNCTIONS
+// ============================================================================
+function openLabourCodeModal(codeKey) {
+    // Create a synthetic message to trigger the specific code view
+    const codeNames = {
+        'social_security': 'code on social security',
+        'industrial_relations': 'industrial relations code',
+        'code_on_wages': 'code on wages',
+        'occupational_safety': 'occupational safety code'
+    };
+    const message = codeNames[codeKey] || 'new labour codes';
+    // Send as user message to trigger the detailed view
+    document.getElementById("user-input").value = message;
+    sendMessage();
+}
+
+function openLabourCodeDownloadModal(codeKey) {
+    // Get user data from localStorage if available
+    const email = localStorage.getItem('userEmail') || '';
+    const name = localStorage.getItem('userName') || '';
+    const company = localStorage.getItem('userCompany') || '';
+    const phone = localStorage.getItem('userPhone') || '';
+    
+    // Show download modal with prefilled data
+    currentDownloadData = {
+        state: 'India',
+        actType: `labour_code_${codeKey}`
+    };
+    document.getElementById('modalState').value = 'India';
+    document.getElementById('modalActType').value = `labour_code_${codeKey}`;
+    
+    const form = document.getElementById('downloadForm');
+    if (form) {
+        form.reset();
+        if (email) document.getElementById('email').value = email;
+        if (name) document.getElementById('fullName').value = name;
+        if (company) document.getElementById('companyName').value = company;
+        if (phone) document.getElementById('contactNumber').value = phone;
+        
+        // Auto-select designation if available in localStorage
+        const savedDesignation = localStorage.getItem('userDesignation');
+        if (savedDesignation) {
+            document.getElementById('designation').value = savedDesignation;
+        }
+        
+        form.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
+        form.querySelectorAll('input, select').forEach(input => input.classList.remove('error'));
+    }
+    resetStars();
+    
+    // Add hidden note that this is a labour code download
+    const modal = document.getElementById('downloadModal');
+    const modalBody = modal.querySelector('.modal-body');
+    const existingNote = modalBody.querySelector('.labour-code-note');
+    if (existingNote) existingNote.remove();
+    
+    const noteDiv = document.createElement('div');
+    noteDiv.className = 'labour-code-note';
+    noteDiv.innerHTML = `
+<div style="background: #e8f5e9; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 13px;">
+    <i class="fas fa-file-pdf" style="color: #dc3545;"></i>
+    <strong>Downloading:</strong> ${NEW_LABOUR_CODES[codeKey]?.title || 'Labour Code'} PDF
+</div>
+`;
+    modalBody.insertBefore(noteDiv, modalBody.firstChild);
+    
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('fullName')?.focus(), 100);
+}
+
+function openComparisonDownloadModal() {
+    const email = localStorage.getItem('userEmail') || '';
+    const name = localStorage.getItem('userName') || '';
+    const company = localStorage.getItem('userCompany') || '';
+    const phone = localStorage.getItem('userPhone') || '';
+    
+    currentDownloadData = {
+        state: 'India',
+        actType: 'labour_code_comparison'
+    };
+    document.getElementById('modalState').value = 'India';
+    document.getElementById('modalActType').value = 'labour_code_comparison';
+    
+    const form = document.getElementById('downloadForm');
+    if (form) {
+        form.reset();
+        if (email) document.getElementById('email').value = email;
+        if (name) document.getElementById('fullName').value = name;
+        if (company) document.getElementById('companyName').value = company;
+        if (phone) document.getElementById('contactNumber').value = phone;
+        
+        const savedDesignation = localStorage.getItem('userDesignation');
+        if (savedDesignation) {
+            document.getElementById('designation').value = savedDesignation;
+        }
+        
+        form.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
+        form.querySelectorAll('input, select').forEach(input => input.classList.remove('error'));
+    }
+    resetStars();
+    
+    const modal = document.getElementById('downloadModal');
+    const modalBody = modal.querySelector('.modal-body');
+    const existingNote = modalBody.querySelector('.labour-code-note');
+    if (existingNote) existingNote.remove();
+    
+    const noteDiv = document.createElement('div');
+    noteDiv.className = 'labour-code-note';
+    noteDiv.innerHTML = `
+<div style="background: #e8f5e9; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 13px;">
+    <i class="fas fa-chart-bar" style="color: #667eea;"></i>
+    <strong>Downloading:</strong> Complete Labour Code Comparison PDF
+</div>
+`;
+    modalBody.insertBefore(noteDiv, modalBody.firstChild);
+    
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('fullName')?.focus(), 100);
+}
+
+// ============================================================================
 // FEE ENQUIRY SUBMIT HANDLER
 // ============================================================================
 async function handleFeeSubmit(event) {
     event.preventDefault();
     if (!validateFeeForm()) return;
-    
     showLoadingOverlay();
     
     const formData = {
@@ -580,14 +692,14 @@ async function handleFeeSubmit(event) {
         if (data.success) {
             closeFeeModal();
             addMessage(`
-            <div class="success-message-content">
-            <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
-            <strong style="font-size: 16px;">✅ Fee Enquiry Submitted Successfully!</strong><br>
-            <p style="margin: 10px 0; color: #666;">Thank you for submitting your enquiry.</p>
-            <p style="margin: 5px 0; color: #666;">📧 Our pricing team will contact you within 24 hours.</p>
-            <p style="margin: 8px 0; color: #1a237e; font-weight: bold;">Support Email: slciaiagent@gmail.com</p>
-            </div>
-            `, 'bot');
+<div class="success-message-content">
+    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
+    <strong style="font-size: 16px;">✅ Fee Enquiry Submitted Successfully!</strong><br>
+    <p style="margin: 10px 0; color: #666;">Thank you for submitting your enquiry.</p>
+    <p style="margin: 5px 0; color: #666;">📧 Our pricing team will contact you within 24 hours.</p>
+    <p style="margin: 8px 0; color: #1a237e; font-weight: bold;">Support Email: slciaiagent@gmail.com</p>
+</div>
+`, 'bot');
             showNotification('Fee enquiry submitted successfully!', 'success');
         } else {
             throw new Error(data.error || "Submission failed");
@@ -620,11 +732,11 @@ function showSuccessMessage(downloadId) {
     const successDiv = document.createElement('div');
     successDiv.className = 'success-message';
     successDiv.innerHTML = `
-    <i class="fas fa-check-circle"></i>
-    <div>
+<i class="fas fa-check-circle"></i>
+<div>
     <strong>✅ Your PDF is Ready!</strong>
-    </div>
-    `;
+</div>
+`;
     document.body.appendChild(successDiv);
     
     const chatBox = document.getElementById('chat-box');
@@ -632,14 +744,14 @@ function showSuccessMessage(downloadId) {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'bot-message';
         messageDiv.innerHTML = `
-        <div class="message-content">
-        <i class="fas fa-check-circle" style="color: #28a745;"></i>
-        <strong>✅ Your PDF is Downloaded!</strong><br>
-        Thank you for your request! Your download has been initiated.<br>
-        Reference ID: #${downloadId || 'N/A'}
-        </div>
-        <span class="time">${getCurrentTime()}</span>
-        `;
+<div class="message-content">
+    <i class="fas fa-check-circle" style="color: #28a745;"></i>
+    <strong>✅ Your PDF is Downloaded!</strong><br>
+    Thank you for your request! Your download has been initiated.<br>
+    Reference ID: #${downloadId || 'N/A'}
+</div>
+<span class="time">${getCurrentTime()}</span>
+`;
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -704,8 +816,8 @@ function sendMessage() {
         // Extract state/actType from response
         if (data.response) {
             const responseLower = data.response.toLowerCase();
-            
             let actType = null;
+            
             if (responseLower.includes('minimum wages')) actType = 'minimum_wages';
             else if (responseLower.includes('holiday list')) actType = 'holiday_list';
             else if (responseLower.includes('working hours')) actType = 'working_hours';
@@ -713,20 +825,24 @@ function sendMessage() {
             
             if (actType) {
                 let state = null;
-                const pattern1 = new RegExp(`(?:Minimum Wages|Holiday List|Working Hours|Shop and Establishment Act|Shop & Establishment Act)\\s*[–\\-]\\s*([A-Za-z\\s]+?)(?:<|\\n|$)`, 'i');
+                const pattern1 = new RegExp(`(?:Minimum Wages|Holiday List|Working Hours|Shop and Establishment Act|Shop & Establishment Act)\\s*[–\-]\s*([A-Za-z\s]+?)(?:<|\n|$)`, 'i');
                 const match1 = data.response.match(pattern1);
+                
                 if (match1 && match1[1]) {
                     state = match1[1].trim().replace(/[^a-zA-Z\s]/g, '').trim();
                 }
+                
                 if (!state && data.state) {
                     state = data.state;
                 }
+                
                 if (!state) {
-                    const titleMatch = data.response.match(/<h3[^>]*>(?:Minimum Wages|Holiday List|Working Hours|Shop and Establishment Act)\\s*[–\\-]\\s*([^<]+)<\/h3>/i);
+                    const titleMatch = data.response.match(/<h3[^>]*>(?:Minimum Wages|Holiday List|Working Hours|Shop and Establishment Act)\s*[–\-]\s*([^<]+)<\/h3>/i);
                     if (titleMatch && titleMatch[1]) {
                         state = titleMatch[1].trim();
                     }
                 }
+                
                 if (state) {
                     state = state.replace(/[^a-zA-Z\s]/g, '').trim();
                     if (state.length > 1) {
@@ -755,17 +871,18 @@ function sendMessage() {
 function addServiceEnquiryButton() {
     const chatBox = document.getElementById('chat-box');
     if (!chatBox || document.querySelector('.service-enquiry-btn')) return;
+    
     const buttonDiv = document.createElement('div');
     buttonDiv.className = 'bot-message';
     buttonDiv.innerHTML = `
-    <div class="message-content">
+<div class="message-content">
     <p>Would you like to know more about our compliance services?</p>
     <button onclick="openServiceModal('General Enquiry')" class="service-enquiry-btn">
-    <i class="fas fa-briefcase"></i> Enquire About Services
+        <i class="fas fa-briefcase"></i> Enquire About Services
     </button>
-    </div>
-    <span class="time">${getCurrentTime()}</span>
-    `;
+</div>
+<span class="time">${getCurrentTime()}</span>
+`;
     chatBox.appendChild(buttonDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -776,17 +893,18 @@ function addServiceEnquiryButton() {
 function addFeeEnquiryButton() {
     const chatBox = document.getElementById('chat-box');
     if (!chatBox || document.querySelector('.fee-enquiry-btn')) return;
+    
     const buttonDiv = document.createElement('div');
     buttonDiv.className = 'bot-message';
     buttonDiv.innerHTML = `
-    <div class="message-content">
+<div class="message-content">
     <p>📋 Get a customized quotation for your compliance needs:</p>
     <button onclick="openFeeModal()" class="fee-enquiry-btn">
-    <i class="fas fa-rupee-sign"></i> Contact Us for Pricing
+        <i class="fas fa-rupee-sign"></i> Contact Us for Pricing
     </button>
-    </div>
-    <span class="time">${getCurrentTime()}</span>
-    `;
+</div>
+<span class="time">${getCurrentTime()}</span>
+`;
     chatBox.appendChild(buttonDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -895,23 +1013,23 @@ function getCurrentTime() {
 
 function checkOllamaStatus() {
     fetch("/check-ollama")
-    .then(res => res.json())
-    .then(data => {
-        const statusElement = document.getElementById("ollama-status");
-        if (statusElement) {
-            if (data.status === "connected") {
-                statusElement.innerHTML = `<i class="fas fa-circle" style="color: #00C851; font-size: 8px;"></i> <span>⚡ Fast Mode (${data.model})</span>`;
-            } else {
+        .then(res => res.json())
+        .then(data => {
+            const statusElement = document.getElementById("ollama-status");
+            if (statusElement) {
+                if (data.status === "connected") {
+                    statusElement.innerHTML = `<i class="fas fa-circle" style="color: #00C851; font-size: 8px;"></i> <span>⚡ Fast Mode (${data.model})</span>`;
+                } else {
+                    statusElement.innerHTML = `<i class="fas fa-circle" style="color: #ff4444; font-size: 8px;"></i> <span>Basic Mode</span>`;
+                }
+            }
+        })
+        .catch(() => {
+            const statusElement = document.getElementById("ollama-status");
+            if (statusElement) {
                 statusElement.innerHTML = `<i class="fas fa-circle" style="color: #ff4444; font-size: 8px;"></i> <span>Basic Mode</span>`;
             }
-        }
-    })
-    .catch(() => {
-        const statusElement = document.getElementById("ollama-status");
-        if (statusElement) {
-            statusElement.innerHTML = `<i class="fas fa-circle" style="color: #ff4444; font-size: 8px;"></i> <span>Basic Mode</span>`;
-        }
-    });
+        });
 }
 
 function showNotification(message, type) {
@@ -919,9 +1037,9 @@ function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
-    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-    <span>${message}</span>
-    `;
+<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+<span>${message}</span>
+`;
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
 }

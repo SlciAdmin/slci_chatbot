@@ -1419,6 +1419,104 @@ def chat():
             <p style="color:#856404; margin-bottom:0;">Please mention the state name in your query.</p>
             <p style="color:#856404; margin-top:10px; margin-bottom:0;">Example: "Minimum wages of Delhi"</p>
         </div>"""})
+        # New Labour Codes queries
+    labour_code_keywords = ["new labour codes", "new labor codes", "labour codes", "labor codes", "new labour laws", 
+                            "new labor laws", "code on social security", "social security code", "industrial relations code", 
+                            "code on wages", "wages code", "occupational safety code", "osh code", "labour code 2020"]
+    
+    if any(phrase in user_message for phrase in labour_code_keywords):
+        # Check for specific code mentions
+        specific_code = None
+        for code_key, code_data in NEW_LABOUR_CODES.items():
+            for keyword in code_data["keywords"]:
+                if keyword in user_message:
+                    specific_code = code_key
+                    break
+            if specific_code:
+                break
+        
+        # If specific code mentioned, show that code details with download button
+        if specific_code:
+            code_data = NEW_LABOUR_CODES[specific_code]
+            comparison_features = "".join([f"<li style='margin:5px 0; color:#555;'><i class='fas fa-check-circle' style='color:#28a745; margin-right:8px;'></i>{feature}</li>" for feature in LABOUR_CODE_COMPARISON["features"]])
+            
+            labour_code_html = f"""<div style="font-family: Arial, sans-serif; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: white; padding: 20px;">
+                    <h3 style="margin:0; display: flex; align-items: center; gap: 10px;"><i class="fas fa-file-code"></i> {code_data['title']}</h3>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="background: #e8f5e9; border-left: 4px solid #28a745; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <i class="fas fa-calendar-check" style="color:#28a745; margin-right:8px;"></i>
+                        <strong style="color:#1a237e;">Effective Date:</strong> <span style="color:#28a745;">{code_data['effective_date']}</span>
+                    </div>
+                    <p style="color:#555; line-height:1.6; margin-bottom:20px;">{code_data['description']}</p>
+                    
+                    <h4 style="color:#1a237e; margin:20px 0 10px;">📊 Complete Analysis of Labour Code Changes</h4>
+                    <ul style="list-style:none; padding:0;">{comparison_features}</ul>
+                    
+                    <div style="display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap;">
+                        <button onclick="openLabourCodeDownloadModal('{specific_code}')" 
+                            style="flex:1; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease;">
+                            <i class="fas fa-file-pdf"></i> Download Official Notification PDF
+                        </button>
+                        <button onclick="openComparisonDownloadModal()" 
+                            style="flex:1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease;">
+                            <i class="fas fa-chart-bar"></i> Download Comparison PDF
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+                        <p style="margin:0; color:#666;"><i class="fas fa-globe"></i> Source: <a href="{code_data['url']}" target="_blank" style="color:#667eea;">slci.in/new-labour-codes/</a></p>
+                    </div>
+                </div>
+            </div>"""
+            
+            return jsonify({"response": labour_code_html, "show_labour_codes": True, "specific_code": specific_code})
+        
+        # Otherwise show all 4 codes as dropdown options
+        else:
+            codes_list = ""
+            for code_key, code_data in NEW_LABOUR_CODES.items():
+                codes_list += f"""
+                <div onclick="openLabourCodeModal('{code_key}')" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border-left: 4px solid #1a237e; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-file-pdf" style="color:#dc3545; font-size: 20px;"></i>
+                        <strong style="color:#1a237e;">{code_data['title']}</strong>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:#667eea;"></i>
+                </div>
+                """
+            
+            labour_code_overview = f"""<div style="font-family: Arial, sans-serif; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <div style="background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: white; padding: 20px;">
+                    <h3 style="margin:0;"><i class="fas fa-balance-scale" style="margin-right:10px;"></i> New Labour Codes 2025</h3>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <i class="fas fa-info-circle" style="color:#856404; margin-right:8px;"></i>
+                        <strong style="color:#856404;">4 New Codes replacing 44+ old labour laws</strong>
+                        <p style="color:#856404; margin:5px 0 0;">Implemented from 21st November 2025</p>
+                    </div>
+                    
+                    <h4 style="color:#1a237e; margin-bottom:15px;">📋 Select a Code to View Details & Download:</h4>
+                    <div style="margin-bottom: 20px;">
+                        {codes_list}
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; margin-top: 20px;">
+                        <button onclick="openComparisonDownloadModal()" 
+                            style="flex:1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                            <i class="fas fa-chart-bar"></i> Download Complete Comparison
+                        </button>
+                    </div>
+                    
+                    <p style="margin-top: 20px; text-align: center; color: #666; font-size: 12px;">
+                        Click any code above to view full details and download the official notification PDF.
+                    </p>
+                </div>
+            </div>"""
+            
+            return jsonify({"response": labour_code_overview, "show_labour_codes": True})
     
     # Rest of your code remains the same...
     # Services list query
@@ -1602,6 +1700,91 @@ def submit_service_enquiry():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+    
+@app.route("/download-labour-code/<code_key>", methods=["GET"])
+def download_labour_code(code_key):
+    """Download labour code PDF - logs to database"""
+    try:
+        download_id = request.args.get('id')
+        
+        if code_key not in NEW_LABOUR_CODES:
+            return jsonify({"error": "Invalid labour code"}), 404
+        
+        code_data = NEW_LABOUR_CODES[code_key]
+        
+        # Create PDF data structure
+        pdf_data = {
+            "tables_data": [[
+                ["Code Name", code_data['title']],
+                ["Effective Date", code_data['effective_date']],
+                ["Description", code_data['description']],
+                ["Source", "slci.in/new-labour-codes/"]
+            ]],
+            "act_type": code_key,
+            "effective_date": code_data['effective_date']
+        }
+        
+        # Add comparison features as a table
+        features_table = [["Key Features", "Details"]]
+        for feature in LABOUR_CODE_COMPARISON["features"]:
+            features_table.append([feature.replace(":", ""), "✓"])
+        pdf_data["tables_data"].append(features_table)
+        
+        # Create PDF
+        pdf_file = create_pdf_file("India", code_data['title'], pdf_data["tables_data"], 
+                                   code_data['effective_date'], download_id)
+        
+        filename = f"{code_key.replace('_', '_')}_notification.pdf"
+        return send_file(pdf_file, mimetype='application/pdf', as_attachment=True, download_name=filename)
+        
+    except Exception as e:
+        print(f"Labour Code Download Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/download-labour-code-comparison", methods=["GET"])
+def download_labour_code_comparison():
+    """Download complete labour code comparison PDF"""
+    try:
+        download_id = request.args.get('id')
+        
+        # Create comprehensive comparison tables
+        tables_data = []
+        
+        # Overview table
+        overview_table = [["Labour Code", "Old Laws Replaced", "Effective Date"]]
+        for code_key, code_data in NEW_LABOUR_CODES.items():
+            overview_table.append([code_data['title'], "Multiple old acts", code_data['effective_date']])
+        tables_data.append(overview_table)
+        
+        # Features table
+        features_table = [["Feature Category", "Details"]]
+        for feature in LABOUR_CODE_COMPARISON["features"]:
+            features_table.append([feature.split(":")[0] if ":" in feature else feature, 
+                                  feature.split(":")[1] if ":" in feature else "Comprehensive update"])
+        tables_data.append(features_table)
+        
+        # Detailed analysis table
+        detailed_table = [
+            ["Aspect", "Old System", "New System"],
+            ["Number of Laws", "44+ separate acts", "4 consolidated codes"],
+            ["Wage Definition", "Varying definitions", "Uniform definition across codes"],
+            ["Social Security", "Limited coverage", "Universal social security"],
+            ["Working Hours", "State-specific variations", "Standardized hours"],
+            ["Compliance", "Multiple registrations", "Single registration portal"],
+            ["Inspections", "Physical inspections", "Web-based inspections"]
+        ]
+        tables_data.append(detailed_table)
+        
+        # Create PDF
+        pdf_file = create_pdf_file("India", "Complete Labour Code Comparison", tables_data, 
+                                   "November 2025", download_id)
+        
+        filename = "labour_codes_comparison.pdf"
+        return send_file(pdf_file, mimetype='application/pdf', as_attachment=True, download_name=filename)
+        
+    except Exception as e:
+        print(f"Labour Code Comparison Download Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/submit-fee-enquiry", methods=["POST"])
 def submit_fee_enquiry():
@@ -1708,7 +1891,7 @@ def submit_fee_enquiry():
 
 @app.route("/request-download", methods=["POST"])
 def request_download():
-    """Step 1: Validate form, log to DB, return download token - UPDATED with IST Time"""
+    """Step 1: Validate form, log to DB, return download token - UPDATED with IST Time and Labour Codes"""
     try:
         data = request.json
         print(f"📥 Received download request: {data}")
@@ -1787,15 +1970,32 @@ def request_download():
             pending_downloads[download_token] = {
                 'data': data, 
                 'download_id': download_id, 
-                'created_at': get_ist_now(),  # ✅ Returns naive datetime in IST  # ✅ IST Time
+                'created_at': get_ist_now(),  # ✅ Returns naive datetime in IST
                 'ip': ip_address
             }
         
+        # ========================================================================
+        # Generate appropriate download URL based on actType
+        # ========================================================================
         if download_id:
+            download_url = None
+            
+            # Check if this is a labour code download
+            if data['actType'].startswith('labour_code_'):
+                code_key = data['actType'].replace('labour_code_', '')
+                if code_key == 'comparison':
+                    download_url = f"/download-labour-code-comparison?id={download_id}"
+                else:
+                    download_url = f"/download-labour-code/{code_key}?id={download_id}"
+            else:
+                # Regular PDF generation through token
+                download_url = f"/generate-pdf/{download_token}"
+            
             return jsonify({
                 "success": True, 
                 "downloadId": download_id, 
-                "downloadToken": download_token, 
+                "downloadToken": download_token,
+                "downloadUrl": download_url,
                 "message": "Form submitted successfully"
             })
         else:
@@ -1984,6 +2184,59 @@ def health():
 # ============================================================================
 # STATE URL DICTIONARIES (Complete List)
 # ============================================================================
+# ============================================================================
+# NEW LABOUR CODES DATA
+# ============================================================================
+NEW_LABOUR_CODES = {
+    "social_security": {
+        "title": "Code on Social Security 2020",
+        "url": "https://www.slci.in/new-labour-codes/",
+        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Code-on-Social-Security-2020.pdf",
+        "description": "Official notification regarding the implementation of the Code on Social Security 2020, issued on 21st November 2025. Provides key updates for employers, HR professionals, and employees about social security compliance, benefits, and legal obligations under the latest labour laws in India.",
+        "effective_date": "21st November 2025",
+        "keywords": ["social security", "social security code", "code on social security", "social security 2020"]
+    },
+    "industrial_relations": {
+        "title": "Industrial Relations Code 2020",
+        "url": "https://www.slci.in/new-labour-codes/",
+        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Industrial-Relations-Code-2020.pdf",
+        "description": "Official notifications regarding the implementation of the Industrial Relations Code 2020, issued on 21st November 2025. Provides key updates for employers, HR professionals, and employees on legal compliance and industrial relations management in India.",
+        "effective_date": "21st November 2025",
+        "keywords": ["industrial relations", "industrial relations code", "ir code", "industrial relations 2020"]
+    },
+    "code_on_wages": {
+        "title": "Code on Wages 2019",
+        "url": "https://www.slci.in/new-labour-codes/",
+        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Code-on-Wages-2019.pdf",
+        "description": "Official notification for the implementation of the Code on Wages 2019, issued on 21st November 2025. Provides clear guidance on wage regulations, helping employers, HR teams, and employees understand their rights and compliance requirements under the latest labour laws in India.",
+        "effective_date": "21st November 2025",
+        "keywords": ["code on wages", "wages code", "wage code", "wages 2019"]
+    },
+    "occupational_safety": {
+        "title": "Occupational Safety, Health & Working Conditions Code 2020",
+        "url": "https://www.slci.in/new-labour-codes/",
+        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Occupational-Safety-Health-Working-Conditions-Code-2020.pdf",
+        "description": "Official notification for the implementation of the Occupational Safety, Health, and Working Conditions Code 2020, issued on 21st November 2025. Helps employers, HR teams, and workers stay informed about workplace safety standards, health regulations, and legal compliance requirements under the new labour code.",
+        "effective_date": "21st November 2025",
+        "keywords": ["occupational safety", "safety code", "health and safety", "working conditions", "osh code"]
+    }
+}
+
+# Comparison document data
+LABOUR_CODE_COMPARISON = {
+    "title": "Complete Analysis of Labour Code Changes",
+    "description": "This comprehensive document provides detailed comparison between old and new labour codes, including:",
+    "features": [
+        "Comparison of 44+ old laws vs 4 new consolidated codes",
+        "Detailed analysis of wage definitions and components",
+        "Social security coverage and benefits comparison",
+        "Working hours and leave policy changes",
+        "Compliance and inspection regime updates",
+        "Impact on employers and employees",
+        "Implementation guidelines and timelines"
+    ]
+}
+
 STATE_MINIMUM_WAGE_URLS = {
     "daman and diu": "https://www.slci.in/daman-and-diu/",
     "arunchal pradesh": "https://www.slci.in/arunachal-pradesh/",
@@ -2180,7 +2433,8 @@ RESPONSES = {
     "pricing": "Our service fees are customized based on your business size, industry, and compliance requirements. Please click the button below to submit your enquiry. Our team will provide a detailed quotation within 24 hours.",
     "fees": "Our service fees are customized based on your business size, industry, and compliance requirements. Please click the button below to submit your enquiry, and our team will provide a detailed quotation within 24 hours.",
     "cost": "Our service fees are customized based on your business size, industry, and compliance requirements. Please click the button below to submit your enquiry, and our team will provide a detailed quotation within 24 hours.",
-    "website": "www.slci.in | Blog: www.slci.in/blog | Knowledge Centre: www.slci.in/knowledge-centre"
+    "website": "www.slci.in | Blog: www.slci.in/blog | Knowledge Centre: www.slci.in/knowledge-centre",
+    "new labour codes": "The New Labour Codes are four consolidated codes replacing 44+ old labour laws, implemented from 21st November 2025. They cover: Code on Social Security 2020, Industrial Relations Code 2020, Code on Wages 2019, and Occupational Safety, Health & Working Conditions Code 2020."
 }
 
 # ============================================================================
@@ -2205,7 +2459,8 @@ KEYWORDS = {
     "pricing": ["pricing", "price", "cost", "fee", "fees", "charges", "how much", "quotation", "quote", "package", "plans", "subscription"],
     "fees": ["fees", "fee structure", "service fees", "consulting fees", "charges", "professional fees"],
     "cost": ["cost", "cost of services", "how much does it cost", "pricing details", "service cost"],
-    "website": ["website", "site", "web", "url", "online", "portal"]
+    "website": ["website", "site", "web", "url", "online", "portal"],
+    "new labour codes":["new labour codes", "labour codes", "new labor codes", "labor codes", "new labour laws", "new labor laws", "labour code", "labor code", "code on social security", "social security code", "industrial relations code", "code on wages", "occupational safety code"]
 }
 
 # ============================================================================
