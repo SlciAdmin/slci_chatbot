@@ -7,7 +7,8 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Changed from purple gradient to a clean light gray/white background */
+    background: #f4f6f4; 
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -23,16 +24,17 @@ body {
     height: 80vh;
     background: white;
     border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1); /* Softened shadow */
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
 }
 
-/* Chat Header */
+/* Chat Header - MATCHED TO SITE GREEN */
 .chat-header {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    /* Changed from dark blue to Green Gradient */
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: white;
     padding: 20px 25px;
     display: flex;
@@ -104,14 +106,15 @@ body {
     padding: 15px 20px;
     border-radius: 20px;
     background: white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     line-height: 1.5;
     font-size: 0.95rem;
     word-wrap: break-word;
 }
 
 .user-message .message-content {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Changed from purple to Green Gradient */
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
     color: white;
     border-bottom-right-radius: 5px;
 }
@@ -141,9 +144,9 @@ body {
     color: rgba(255, 255, 255, 0.7);
 }
 
-/* Download Button */
+/* Download Button - Green Variant */
 .download-pdf-btn {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: white;
     border: none;
     padding: 12px 25px;
@@ -155,12 +158,12 @@ body {
     align-items: center;
     gap: 8px;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
 }
 
 .download-pdf-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
 }
 
 /* Chat Input */
@@ -181,9 +184,10 @@ body {
 }
 
 .chat-input:focus-within {
-    border-color: #667eea;
+    /* Changed border color to Green */
+    border-color: #4caf50;
     background: white;
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.1);
 }
 
 .chat-input input {
@@ -200,7 +204,8 @@ body {
 }
 
 .chat-input button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Changed to Green */
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
     color: white;
     border: none;
     width: 45px;
@@ -215,7 +220,7 @@ body {
 
 .chat-input button:hover:not(:disabled) {
     transform: scale(1.1);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
 }
 
 .chat-input button:disabled {
@@ -244,14 +249,15 @@ body {
     width: 90%;
     max-width: 500px;
     border-radius: 20px;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
     animation: slideDown 0.3s ease-out;
     max-height: 90vh;
     overflow-y: auto;
 }
 
 .modal-header {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    /* Changed to Green */
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: white;
     padding: 20px 25px;
     border-top-left-radius: 20px;
@@ -311,7 +317,8 @@ body {
 }
 
 .form-group label i {
-    color: #667eea;
+    /* Changed to Green */
+    color: #4caf50;
     margin-right: 8px;
     width: 20px;
 }
@@ -330,8 +337,9 @@ body {
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    /* Changed to Green */
+    border-color: #4caf50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
 .form-group input.error,
@@ -426,13 +434,14 @@ body {
 }
 
 .modal-submit-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* Changed to Green */
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
     color: white;
 }
 
 .modal-submit-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
 }
 
 .modal-submit-btn:disabled {
@@ -465,7 +474,8 @@ body {
 
 .loading-spinner i {
     font-size: 50px;
-    color: #667eea;
+    /* Changed to Green */
+    color: #4caf50;
     margin-bottom: 15px;
 }
 
@@ -524,7 +534,8 @@ body {
 }
 
 .minimum-wage-table th {
-    background: #1a237e;
+    /* Changed to Green */
+    background: #2e7d32;
     color: white;
     padding: 12px;
     font-weight: 600;
@@ -545,7 +556,7 @@ body {
 }
 
 .minimum-wage-table tr:hover {
-    background: #e8eaf6;
+    background: #e8f5e9; /* Light green hover */
 }
 
 /* Effective Date Banner */
@@ -581,7 +592,7 @@ body {
 
 .date-label {
     font-weight: 600;
-    color: #1a237e;
+    color: #1b5e20; /* Dark Green */
     font-size: 0.9rem;
 }
 
@@ -635,7 +646,8 @@ body {
 .typing-indicator span {
     width: 8px;
     height: 8px;
-    background: #667eea;
+    /* Changed to Green */
+    background: #4caf50;
     border-radius: 50%;
     animation: typing 1s infinite ease-in-out;
 }
@@ -816,17 +828,18 @@ body {
 }
 
 .fee-enquiry-btn {
-        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-        color: white; border: none; padding: 10px 20px;
-        border-radius: 8px; cursor: pointer; font-size: 14px;
-        font-weight: 500; margin-top: 10px; transition: all 0.3s ease;
-        display: inline-flex; align-items: center; gap: 8px;
-    }
-    .fee-enquiry-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
-    }
-    /* ============================================================================
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    color: white; border: none; padding: 10px 20px;
+    border-radius: 8px; cursor: pointer; font-size: 14px;
+    font-weight: 500; margin-top: 10px; transition: all 0.3s ease;
+    display: inline-flex; align-items: center; gap: 8px;
+}
+.fee-enquiry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+}
+
+/* ============================================================================
    SERVICES LIST STYLES (Vertical & Animated)
    ============================================================================ */
 .services-list {
@@ -863,13 +876,13 @@ body {
     animation: slideUp 0.5s ease forwards;
 }
 
-/* Hover Effect - Matches your Chat Input Button Gradient */
+/* Hover Effect - Changed to Green */
 .service-btn:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
     color: white;
     border-color: transparent;
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
     padding-left: 22px; /* Slight slide effect */
 }
 
@@ -935,7 +948,8 @@ body {
 }
 
 .labour-code-header {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    /* Changed to Green */
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: white;
     padding: 15px 20px;
     cursor: pointer;
@@ -946,7 +960,7 @@ body {
 }
 
 .labour-code-header:hover {
-    background: linear-gradient(135deg, #283593 0%, #1a237e 100%);
+    background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
 }
 
 .labour-code-header h4 {
@@ -999,7 +1013,7 @@ body {
 
 /* Labour Code Buttons */
 .labour-code-download-btn {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
     color: white;
     border: none;
     padding: 12px 20px;
@@ -1018,11 +1032,11 @@ body {
 
 .labour-code-download-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+    box-shadow: 0 5px 15px rgba(46, 125, 50, 0.3);
 }
 
 .labour-code-comparison-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
     color: white;
     border: none;
     padding: 12px 20px;
@@ -1041,7 +1055,7 @@ body {
 
 .labour-code-comparison-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
 }
 
 /* Labour Code Grid for Desktop */
