@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Flask imports
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 
 # Web scraping
 import requests
@@ -1420,6 +1420,7 @@ def chat():
             <p style="color:#856404; margin-top:10px; margin-bottom:0;">Example: "Minimum wages of Delhi"</p>
         </div>"""})
         # New Labour Codes queries
+        # New Labour Codes queries
     labour_code_keywords = ["new labour codes", "new labor codes", "labour codes", "labor codes", "new labour laws", 
                             "new labor laws", "code on social security", "social security code", "industrial relations code", 
                             "code on wages", "wages code", "occupational safety code", "osh code", "labour code 2020"]
@@ -1440,33 +1441,48 @@ def chat():
             code_data = NEW_LABOUR_CODES[specific_code]
             comparison_features = "".join([f"<li style='margin:5px 0; color:#555;'><i class='fas fa-check-circle' style='color:#28a745; margin-right:8px;'></i>{feature}</li>" for feature in LABOUR_CODE_COMPARISON["features"]])
             
+            # Generate Drive button HTML if drive_url exists
+            drive_button = ""
+            if code_data.get('drive_url'):
+                drive_button = f"""
+                <a href="{code_data['drive_url']}" target="_blank" style="flex:1; background: linear-gradient(135deg, #4285F4 0%, #0F9D58 100%); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; transition: all 0.3s ease;">
+                    <i class="fab fa-google-drive"></i> View on Google Drive
+                </a>
+                """
+            
             labour_code_html = f"""<div style="font-family: Arial, sans-serif; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                <div style="background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: white; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); color: white; padding: 20px;">
                     <h3 style="margin:0; display: flex; align-items: center; gap: 10px;"><i class="fas fa-file-code"></i> {code_data['title']}</h3>
                 </div>
                 <div style="padding: 20px;">
                     <div style="background: #e8f5e9; border-left: 4px solid #28a745; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                         <i class="fas fa-calendar-check" style="color:#28a745; margin-right:8px;"></i>
-                        <strong style="color:#1a237e;">Effective Date:</strong> <span style="color:#28a745;">{code_data['effective_date']}</span>
+                        <strong style="color:#1b5e20;">Effective Date:</strong> <span style="color:#28a745;">{code_data['effective_date']}</span>
                     </div>
                     <p style="color:#555; line-height:1.6; margin-bottom:20px;">{code_data['description']}</p>
                     
-                    <h4 style="color:#1a237e; margin:20px 0 10px;">📊 Complete Analysis of Labour Code Changes</h4>
+                    <h4 style="color:#1b5e20; margin:20px 0 10px;">📊 Complete Analysis of Labour Code Changes</h4>
                     <ul style="list-style:none; padding:0;">{comparison_features}</ul>
                     
                     <div style="display: flex; gap: 15px; margin-top: 25px; flex-wrap: wrap;">
                         <button onclick="openLabourCodeDownloadModal('{specific_code}')" 
-                            style="flex:1; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease;">
-                            <i class="fas fa-file-pdf"></i> Download Official Notification PDF
+                            style="flex:1; background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease;">
+                            <i class="fas fa-file-pdf"></i> Download via Form
                         </button>
                         <button onclick="openComparisonDownloadModal()" 
-                            style="flex:1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease;">
+                            style="flex:1; background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%); color: white; border: none; padding: 15px 20px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.3s ease;">
                             <i class="fas fa-chart-bar"></i> Download Comparison PDF
                         </button>
                     </div>
                     
+                    {f'''
+                    <div style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
+                        {drive_button}
+                    </div>
+                    ''' if drive_button else ''}
+                    
                     <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
-                        <p style="margin:0; color:#666;"><i class="fas fa-globe"></i> Source: <a href="{code_data['url']}" target="_blank" style="color:#667eea;">slci.in/new-labour-codes/</a></p>
+                        <p style="margin:0; color:#666;"><i class="fas fa-globe"></i> Source: <a href="{code_data['url']}" target="_blank" style="color:#2e7d32;">slci.in/new-labour-codes/</a></p>
                     </div>
                 </div>
             </div>"""
@@ -1478,17 +1494,30 @@ def chat():
             codes_list = ""
             for code_key, code_data in NEW_LABOUR_CODES.items():
                 codes_list += f"""
-                <div onclick="openLabourCodeModal('{code_key}')" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border-left: 4px solid #1a237e; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; display: flex; align-items: center; justify-content: space-between;">
+                <div onclick="openLabourCodeModal('{code_key}')" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; cursor: pointer; border-left: 4px solid #2e7d32; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <i class="fas fa-file-pdf" style="color:#dc3545; font-size: 20px;"></i>
-                        <strong style="color:#1a237e;">{code_data['title']}</strong>
+                        <strong style="color:#2e7d32;">{code_data['title']}</strong>
                     </div>
-                    <i class="fas fa-chevron-right" style="color:#667eea;"></i>
+                    <i class="fas fa-chevron-right" style="color:#2e7d32;"></i>
                 </div>
                 """
             
+            # Add Google Drive links for available PDFs
+            drive_links = ""
+            for code_key, code_data in NEW_LABOUR_CODES.items():
+                if code_data.get('drive_url'):
+                    drive_links += f"""
+                    <div style="margin-bottom: 8px;">
+                        <a href="{code_data['drive_url']}" target="_blank" style="color: #2e7d32; text-decoration: none; display: flex; align-items: center; gap: 8px; padding: 8px; background: #f5f5f5; border-radius: 5px;">
+                            <i class="fab fa-google-drive" style="color: #4285F4;"></i>
+                            <span><strong>{code_data['title']}</strong> - View on Drive</span>
+                        </a>
+                    </div>
+                    """
+            
             labour_code_overview = f"""<div style="font-family: Arial, sans-serif; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                <div style="background: linear-gradient(135deg, #1a237e 0%, #283593 100%); color: white; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%); color: white; padding: 20px;">
                     <h3 style="margin:0;"><i class="fas fa-balance-scale" style="margin-right:10px;"></i> New Labour Codes 2025</h3>
                 </div>
                 <div style="padding: 20px;">
@@ -1498,20 +1527,25 @@ def chat():
                         <p style="color:#856404; margin:5px 0 0;">Implemented from 21st November 2025</p>
                     </div>
                     
-                    <h4 style="color:#1a237e; margin-bottom:15px;">📋 Select a Code to View Details & Download:</h4>
+                    <h4 style="color:#2e7d32; margin-bottom:15px;">📋 Select a Code to View Details:</h4>
                     <div style="margin-bottom: 20px;">
                         {codes_list}
                     </div>
                     
-                    <div style="display: flex; gap: 15px; margin-top: 20px;">
+                    <h4 style="color:#2e7d32; margin:20px 0 10px;">🔗 Quick Access to PDFs:</h4>
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        {drive_links if drive_links else '<p style="color:#666;">Google Drive links will be added soon.</p>'}
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
                         <button onclick="openComparisonDownloadModal()" 
-                            style="flex:1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                            style="flex:1; background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
                             <i class="fas fa-chart-bar"></i> Download Complete Comparison
                         </button>
                     </div>
                     
                     <p style="margin-top: 20px; text-align: center; color: #666; font-size: 12px;">
-                        Click any code above to view full details and download the official notification PDF.
+                        Click any code above to view full details. PDFs are available on Google Drive for direct download.
                     </p>
                 </div>
             </div>"""
@@ -1703,7 +1737,7 @@ def submit_service_enquiry():
     
 @app.route("/download-labour-code/<code_key>", methods=["GET"])
 def download_labour_code(code_key):
-    """Download labour code PDF - logs to database"""
+    """Download labour code PDF - logs to database and redirects to Google Drive"""
     try:
         download_id = request.args.get('id')
         
@@ -1712,40 +1746,63 @@ def download_labour_code(code_key):
         
         code_data = NEW_LABOUR_CODES[code_key]
         
-        # Create PDF data structure
-        pdf_data = {
-            "tables_data": [[
-                ["Code Name", code_data['title']],
-                ["Effective Date", code_data['effective_date']],
-                ["Description", code_data['description']],
-                ["Source", "slci.in/new-labour-codes/"]
-            ]],
-            "act_type": code_key,
-            "effective_date": code_data['effective_date']
-        }
+        # Log the download in database
+        try:
+            pool = get_db_pool()
+            if pool:
+                with pool.connection() as conn:
+                    with conn.cursor() as cur:
+                        # Update download stats for this labour code
+                        cur.execute("""
+                            INSERT INTO download_stats (state, act_type, download_count, last_download)
+                            VALUES (%s, %s, 1, %s)
+                            ON CONFLICT(state, act_type) DO UPDATE 
+                            SET download_count = download_stats.download_count + 1, 
+                                last_download = %s
+                        """, ("India", f"labour_code_{code_key}", get_ist_now(), get_ist_now()))
+                        conn.commit()
+                        print(f"✅ Labour code download logged: {code_key}")
+        except Exception as e:
+            print(f"⚠️ Could not log download: {e}")
         
-        # Add comparison features as a table
-        features_table = [["Key Features", "Details"]]
-        for feature in LABOUR_CODE_COMPARISON["features"]:
-            features_table.append([feature.replace(":", ""), "✓"])
-        pdf_data["tables_data"].append(features_table)
-        
-        # Create PDF
-        pdf_file = create_pdf_file("India", code_data['title'], pdf_data["tables_data"], 
-                                   code_data['effective_date'], download_id)
-        
-        filename = f"{code_key.replace('_', '_')}_notification.pdf"
-        return send_file(pdf_file, mimetype='application/pdf', as_attachment=True, download_name=filename)
+        # If we have a direct download URL, redirect to it
+        if code_data.get('download_url'):
+            return redirect(code_data['download_url'])
+        # Otherwise redirect to drive view URL
+        elif code_data.get('drive_url'):
+            return redirect(code_data['drive_url'])
+        else:
+            # Fallback to generating PDF
+            return generate_labour_code_pdf(code_key, download_id)
         
     except Exception as e:
         print(f"Labour Code Download Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/download-labour-code-comparison", methods=["GET"])
 def download_labour_code_comparison():
     """Download complete labour code comparison PDF"""
     try:
         download_id = request.args.get('id')
+        
+        # Log the download
+        try:
+            pool = get_db_pool()
+            if pool:
+                with pool.connection() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO download_stats (state, act_type, download_count, last_download)
+                            VALUES (%s, %s, 1, %s)
+                            ON CONFLICT(state, act_type) DO UPDATE 
+                            SET download_count = download_stats.download_count + 1, 
+                                last_download = %s
+                        """, ("India", "labour_code_comparison", get_ist_now(), get_ist_now()))
+                        conn.commit()
+                        print(f"✅ Labour code comparison download logged")
+        except Exception as e:
+            print(f"⚠️ Could not log download: {e}")
         
         # Create comprehensive comparison tables
         tables_data = []
@@ -1775,6 +1832,14 @@ def download_labour_code_comparison():
         ]
         tables_data.append(detailed_table)
         
+        # Google Drive links table
+        drive_table = [["Labour Code", "Google Drive Link"]]
+        for code_key, code_data in NEW_LABOUR_CODES.items():
+            if code_data.get('drive_url'):
+                drive_table.append([code_data['title'], code_data['drive_url']])
+        if len(drive_table) > 1:
+            tables_data.append(drive_table)
+        
         # Create PDF
         pdf_file = create_pdf_file("India", "Complete Labour Code Comparison", tables_data, 
                                    "November 2025", download_id)
@@ -1785,6 +1850,44 @@ def download_labour_code_comparison():
     except Exception as e:
         print(f"Labour Code Comparison Download Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+def generate_labour_code_pdf(code_key, download_id=None):
+    """Generate PDF for labour code (fallback if no Drive link)"""
+    code_data = NEW_LABOUR_CODES[code_key]
+    
+    # Create PDF data structure
+    tables_data = []
+    
+    # Main details table
+    details_table = [
+        ["Code Name", code_data['title']],
+        ["Effective Date", code_data['effective_date']],
+        ["Description", code_data['description']],
+        ["Source", "slci.in/new-labour-codes/"]
+    ]
+    tables_data.append(details_table)
+    
+    # Add comparison features as a table
+    features_table = [["Key Features", "Status"]]
+    for feature in LABOUR_CODE_COMPARISON["features"]:
+        features_table.append([feature, "✓ Included"])
+    tables_data.append(features_table)
+    
+    # Add Google Drive info if available
+    if code_data.get('drive_url'):
+        drive_table = [
+            ["Google Drive Link", "Access PDF"],
+            ["URL", code_data['drive_url']]
+        ]
+        tables_data.append(drive_table)
+    
+    # Create PDF
+    pdf_file = create_pdf_file("India", code_data['title'], tables_data, 
+                               code_data['effective_date'], download_id)
+    
+    filename = f"{code_key.replace('_', '_')}_notification.pdf"
+    return send_file(pdf_file, mimetype='application/pdf', as_attachment=True, download_name=filename)
 
 @app.route("/submit-fee-enquiry", methods=["POST"])
 def submit_fee_enquiry():
@@ -2187,11 +2290,15 @@ def health():
 # ============================================================================
 # NEW LABOUR CODES DATA
 # ============================================================================
+# ============================================================================
+# NEW LABOUR CODES DATA - Updated with Google Drive Links
+# ============================================================================
 NEW_LABOUR_CODES = {
     "social_security": {
         "title": "Code on Social Security 2020",
         "url": "https://www.slci.in/new-labour-codes/",
-        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Code-on-Social-Security-2020.pdf",
+        "drive_url": "https://drive.google.com/file/d/1OHxyV0mvZ2XzbD8vfTWH1YjzsLn5BwDo/view",
+        "download_url": "https://drive.google.com/uc?export=download&id=1OHxyV0mvZ2XzbD8vfTWH1YjzsLn5BwDo",
         "description": "Official notification regarding the implementation of the Code on Social Security 2020, issued on 21st November 2025. Provides key updates for employers, HR professionals, and employees about social security compliance, benefits, and legal obligations under the latest labour laws in India.",
         "effective_date": "21st November 2025",
         "keywords": ["social security", "social security code", "code on social security", "social security 2020"]
@@ -2199,7 +2306,8 @@ NEW_LABOUR_CODES = {
     "industrial_relations": {
         "title": "Industrial Relations Code 2020",
         "url": "https://www.slci.in/new-labour-codes/",
-        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Industrial-Relations-Code-2020.pdf",
+        "drive_url": "https://drive.google.com/file/d/1DsrojQwuBKbBR0BeO1e926He1b3MFrp9/view",
+        "download_url": "https://drive.google.com/uc?export=download&id=1DsrojQwuBKbBR0BeO1e926He1b3MFrp9",
         "description": "Official notifications regarding the implementation of the Industrial Relations Code 2020, issued on 21st November 2025. Provides key updates for employers, HR professionals, and employees on legal compliance and industrial relations management in India.",
         "effective_date": "21st November 2025",
         "keywords": ["industrial relations", "industrial relations code", "ir code", "industrial relations 2020"]
@@ -2207,7 +2315,8 @@ NEW_LABOUR_CODES = {
     "code_on_wages": {
         "title": "Code on Wages 2019",
         "url": "https://www.slci.in/new-labour-codes/",
-        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Code-on-Wages-2019.pdf",
+        "drive_url": "https://drive.google.com/file/d/1waBwWLNYYfva0TSb-HAQbBkI1AKE3YSA/view",
+        "download_url": "https://drive.google.com/uc?export=download&id=1waBwWLNYYfva0TSb-HAQbBkI1AKE3YSA",
         "description": "Official notification for the implementation of the Code on Wages 2019, issued on 21st November 2025. Provides clear guidance on wage regulations, helping employers, HR teams, and employees understand their rights and compliance requirements under the latest labour laws in India.",
         "effective_date": "21st November 2025",
         "keywords": ["code on wages", "wages code", "wage code", "wages 2019"]
@@ -2215,7 +2324,8 @@ NEW_LABOUR_CODES = {
     "occupational_safety": {
         "title": "Occupational Safety, Health & Working Conditions Code 2020",
         "url": "https://www.slci.in/new-labour-codes/",
-        "pdf_url": "https://www.slci.in/wp-content/uploads/2025/11/Occupational-Safety-Health-Working-Conditions-Code-2020.pdf",
+        "drive_url": "",  # Add when available
+        "download_url": "",  # Add when available
         "description": "Official notification for the implementation of the Occupational Safety, Health, and Working Conditions Code 2020, issued on 21st November 2025. Helps employers, HR teams, and workers stay informed about workplace safety standards, health regulations, and legal compliance requirements under the new labour code.",
         "effective_date": "21st November 2025",
         "keywords": ["occupational safety", "safety code", "health and safety", "working conditions", "osh code"]

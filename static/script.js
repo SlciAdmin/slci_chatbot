@@ -5,7 +5,7 @@ let currentDownloadData = {
 };
 
 // ============================================================================
-// NEW: Labour Codes Configuration (Added after currentDownloadData)
+// NEW: Labour Codes Configuration
 // ============================================================================
 const NEW_LABOUR_CODES = {
     'social_security': { title: 'Code on Social Security 2020' },
@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeModal();
     initializeFormValidation();
     initializeRatingStars();
-    initializeServiceModal();  // This now includes auto-fill
+    initializeServiceModal();
     initializeFeeModal();
 });
 
@@ -35,11 +35,14 @@ function initializeModal() {
     const modal = document.getElementById('downloadModal');
     const closeBtn = document.querySelector('.close-modal');
     const cancelBtn = document.querySelector('.modal-cancel-btn');
+    
     if (closeBtn) closeBtn.onclick = () => closeModal();
     if (cancelBtn) cancelBtn.onclick = () => closeModal();
+    
     window.onclick = (event) => {
         if (event.target == modal) closeModal();
     };
+    
     const form = document.getElementById('downloadForm');
     if (form) form.addEventListener('submit', handleFormSubmit);
 }
@@ -50,17 +53,21 @@ function initializeModal() {
 function initializeServiceModal() {
     const serviceModal = document.getElementById('serviceModal');
     const closeServiceBtn = document.querySelector('.close-service-modal');
+    
     if (closeServiceBtn) {
         closeServiceBtn.onclick = () => closeServiceModal();
     }
+    
     const serviceCancelBtn = serviceModal?.querySelector('.modal-cancel-btn');
     if (serviceCancelBtn) {
         serviceCancelBtn.onclick = () => closeServiceModal();
     }
+    
     const serviceForm = document.getElementById('serviceForm');
     if (serviceForm) {
         serviceForm.addEventListener('submit', handleServiceSubmit);
     }
+    
     // Auto-fill form when modal opens using MutationObserver
     const modal = document.getElementById('serviceModal');
     const observer = new MutationObserver((mutations) => {
@@ -73,9 +80,11 @@ function initializeServiceModal() {
         });
     });
     observer.observe(modal, { attributes: true });
+    
     window.addEventListener('click', (event) => {
         if (event.target == serviceModal) closeServiceModal();
     });
+    
     // Add validation listeners
     const serviceInputs = document.querySelectorAll('#serviceForm input, #serviceForm textarea');
     serviceInputs.forEach(input => {
@@ -90,14 +99,19 @@ function initializeServiceModal() {
 function initializeFeeModal() {
     const feeModal = document.getElementById('feeModal');
     const closeFeeBtn = document.querySelector('.close-fee-modal');
+    
     if (closeFeeBtn) closeFeeBtn.onclick = () => closeFeeModal();
+    
     const feeCancelBtn = feeModal?.querySelector('.fee-cancel-btn');
     if (feeCancelBtn) feeCancelBtn.onclick = () => closeFeeModal();
+    
     const feeForm = document.getElementById('feeForm');
     if (feeForm) feeForm.addEventListener('submit', handleFeeSubmit);
+    
     window.addEventListener('click', (event) => {
         if (event.target == feeModal) closeFeeModal();
     });
+    
     const feeInputs = document.querySelectorAll('#feeForm input, #feeForm textarea');
     feeInputs.forEach(input => {
         input.addEventListener('input', function() { validateFeeField(this); });
@@ -108,7 +122,9 @@ function initializeFeeModal() {
 function initializeRatingStars() {
     const stars = document.querySelectorAll('.rating-stars i');
     const ratingInput = document.getElementById('rating');
+    
     if (!stars.length || !ratingInput) return;
+    
     stars.forEach(star => {
         star.addEventListener('mouseover', function() {
             highlightStars(this.dataset.rating);
@@ -144,6 +160,7 @@ function resetStars() {
 function initializeFormValidation() {
     const form = document.getElementById('downloadForm');
     if (!form) return;
+    
     form.querySelectorAll('input, select').forEach(input => {
         input.addEventListener('input', function() { validateField(this); });
         input.addEventListener('blur', function() { validateField(this); });
@@ -152,9 +169,12 @@ function initializeFormValidation() {
 
 function validateField(field) {
     if (!field) return true;
+    
     const value = field.value.trim();
     let isValid = true, errorMessage = '';
+    
     field.parentElement.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
+    
     switch(field.id) {
         case 'fullName':
             if (!value) { isValid = false; errorMessage = 'Full name is required'; }
@@ -178,6 +198,7 @@ function validateField(field) {
             if (!value) { isValid = false; errorMessage = 'Please select your designation'; }
             break;
     }
+    
     if (value && isValid) {
         const icon = document.createElement('i');
         icon.className = 'fas fa-check-circle validation-icon valid';
@@ -192,14 +213,18 @@ function validateField(field) {
     } else {
         field.classList.remove('error');
     }
+    
     return isValid;
 }
 
 function validateServiceField(field) {
     if (!field) return true;
+    
     const value = field.value.trim();
     let isValid = true, errorMessage = '';
+    
     field.parentElement.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
+    
     switch(field.id) {
         case 'serviceFullName':
             if (!value) { isValid = false; errorMessage = 'Full name is required'; }
@@ -224,6 +249,7 @@ function validateServiceField(field) {
             else if (value.length < 10) { isValid = false; errorMessage = 'Query must be at least 10 characters'; }
             break;
     }
+    
     if (value && isValid) {
         const icon = document.createElement('i');
         icon.className = 'fas fa-check-circle validation-icon valid';
@@ -238,6 +264,7 @@ function validateServiceField(field) {
     } else {
         field.classList.remove('error');
     }
+    
     return isValid;
 }
 
@@ -246,9 +273,12 @@ function validateServiceField(field) {
 // ============================================================================
 function validateFeeField(field) {
     if (!field) return true;
+    
     const value = field.value.trim();
     let isValid = true, errorMessage = '';
+    
     field.parentElement.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
+    
     switch(field.id) {
         case 'feeFullName':
             if (!value) { isValid = false; errorMessage = 'Full name is required'; }
@@ -273,6 +303,7 @@ function validateFeeField(field) {
             else if (value.length < 20) { isValid = false; errorMessage = 'Description must be at least 20 characters'; }
             break;
     }
+    
     if (value && isValid) {
         const icon = document.createElement('i');
         icon.className = 'fas fa-check-circle validation-icon valid';
@@ -287,16 +318,19 @@ function validateFeeField(field) {
     } else {
         field.classList.remove('error');
     }
+    
     return isValid;
 }
 
 function validateFeeForm() {
     const form = document.getElementById('feeForm');
     if (!form) return false;
+    
     let isValid = true;
     form.querySelectorAll('input, textarea').forEach(input => {
         if (!validateFeeField(input)) isValid = false;
     });
+    
     return isValid;
 }
 
@@ -311,25 +345,30 @@ function showFieldError(field, message) {
 function validateForm() {
     const form = document.getElementById('downloadForm');
     if (!form) return false;
+    
     let isValid = true;
     form.querySelectorAll('input, select').forEach(input => {
         if (!validateField(input)) isValid = false;
     });
+    
     const rating = document.getElementById('rating').value;
     if (!rating) {
         showNotification('Please rate our service', 'error');
         isValid = false;
     }
+    
     return isValid;
 }
 
 function validateServiceForm() {
     const form = document.getElementById('serviceForm');
     if (!form) return false;
+    
     let isValid = true;
     form.querySelectorAll('input, textarea').forEach(input => {
         if (!validateServiceField(input)) isValid = false;
     });
+    
     return isValid;
 }
 
@@ -337,13 +376,16 @@ function openDownloadModal(state, actType) {
     currentDownloadData = { state, actType };
     document.getElementById('modalState').value = state;
     document.getElementById('modalActType').value = actType;
+    
     const form = document.getElementById('downloadForm');
     if (form) {
         form.reset();
         form.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
         form.querySelectorAll('input, select').forEach(input => input.classList.remove('error'));
     }
+    
     resetStars();
+    
     const modal = document.getElementById('downloadModal');
     if (modal) {
         modal.style.display = 'block';
@@ -356,30 +398,36 @@ function openDownloadModal(state, actType) {
 // ENHANCED OPEN SERVICE MODAL WITH AUTO-FILL
 // ============================================================================
 function openServiceModal(serviceName) {
-    console.log("Opening service modal for:", serviceName); // Debug log
+    console.log("Opening service modal for:", serviceName);
+    
     const modal = document.getElementById('serviceModal');
     const selectedServiceInput = document.getElementById('selectedService');
+    
     if (!modal || !selectedServiceInput) {
         console.error("Modal elements not found!");
         return;
     }
+    
     // Set the service name
     selectedServiceInput.value = serviceName;
+    
     // Reset and clear form
     const form = document.getElementById('serviceForm');
     if (form) {
         form.reset();
-        // Clear all validation icons and error classes
         form.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
         form.querySelectorAll('input, textarea').forEach(input => {
             input.classList.remove('error');
         });
     }
+    
     // Auto-fill with saved data
     autoFillServiceForm();
+    
     // Show modal
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
+    
     // Focus on first field
     setTimeout(() => {
         const firstField = document.getElementById('serviceFullName');
@@ -397,9 +445,11 @@ function openFeeModal() {
         form.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
         form.querySelectorAll('input, textarea').forEach(input => input.classList.remove('error'));
     }
+    
     const modal = document.getElementById('feeModal');
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
+    
     setTimeout(() => document.getElementById('feeFullName')?.focus(), 100);
 }
 
@@ -427,6 +477,7 @@ function closeFeeModal() {
 async function handleFormSubmit(event) {
     event.preventDefault();
     if (!validateForm()) return;
+    
     showLoadingOverlay();
     
     const formData = {
@@ -446,10 +497,12 @@ async function handleFormSubmit(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
+        
         const data = await response.json();
         
         if (data.success && data.downloadToken) {
             closeModal();
+            
             const downloadRecord = {
                 downloadId: data.downloadId,
                 state: currentDownloadData.state,
@@ -458,16 +511,20 @@ async function handleFormSubmit(event) {
                 token: data.downloadToken
             };
             localStorage.setItem('lastDownload', JSON.stringify(downloadRecord));
+            
             showSuccessMessage(data.downloadId);
             
             // ✅ UPDATED: Use the download URL if provided, otherwise fallback to generate-pdf
             setTimeout(() => {
                 if (data.downloadUrl) {
+                    // Google Drive or external URL redirect
                     window.location.href = data.downloadUrl;
                 } else {
+                    // Fallback to internal PDF generation
                     window.location.href = `/generate-pdf/${data.downloadToken}`;
                 }
             }, 800);
+            
         } else {
             throw new Error(data.error || 'Form submission failed');
         }
@@ -495,34 +552,37 @@ async function handleServiceSubmit(event) {
         query: document.getElementById('serviceQuery').value.trim()
     };
     
-    console.log("Submitting service enquiry:", formData); // Debug log
+    console.log("Submitting service enquiry:", formData);
     
     try {
         showLoadingOverlay();
+        
         const response = await fetch('/submit-service-enquiry', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
-        const data = await response.json();
         
-        console.log("Service submission response:", data); // Debug log
+        const data = await response.json();
+        console.log("Service submission response:", data);
         
         if (data.success) {
             closeServiceModal();
+            
             // Show success message in chat
             const successMessage = `
-<div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 10px; border-left: 4px solid #28a745;">
-    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
-    <div style="margin-top: 10px;">
-        <strong style="font-size: 16px; color: #155724;">✅ Enquiry Submitted Successfully!</strong>
-        <p style="margin: 10px 0; color: #155724;">Thank you for your interest in: <strong>${formData.service}</strong></p>
-        <p style="margin: 5px 0; color: #155724;">Reference ID: <strong>${data.enquiryId || 'N/A'}</strong></p>
-        <p style="margin: 5px 0; color: #155724;">Our team will contact you within 24 hours.</p>
-    </div>
-</div>
-`;
+                <div style="text-align: center; padding: 15px; background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border-radius: 10px; border-left: 4px solid #28a745;">
+                    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
+                    <div style="margin-top: 10px;">
+                        <strong style="font-size: 16px; color: #155724;">✅ Enquiry Submitted Successfully!</strong>
+                        <p style="margin: 10px 0; color: #155724;">Thank you for your interest in: <strong>${formData.service}</strong></p>
+                        <p style="margin: 5px 0; color: #155724;">Reference ID: <strong>${data.enquiryId || 'N/A'}</strong></p>
+                        <p style="margin: 5px 0; color: #155724;">Our team will contact you within 24 hours.</p>
+                    </div>
+                </div>
+            `;
             addMessage(successMessage, 'bot');
+            
             // Also show a notification
             showNotification('Enquiry submitted successfully! Check your email for confirmation.', 'success');
             
@@ -531,6 +591,7 @@ async function handleServiceSubmit(event) {
             localStorage.setItem('userName', formData.fullName);
             localStorage.setItem('userCompany', formData.companyName);
             localStorage.setItem('userPhone', formData.contactNumber);
+            
         } else {
             throw new Error(data.error || "Submission failed");
         }
@@ -543,7 +604,7 @@ async function handleServiceSubmit(event) {
 }
 
 // ============================================================================
-// NEW LABOUR CODES FUNCTIONS
+// ✅ NEW LABOUR CODES FUNCTIONS - Updated with Google Drive Support
 // ============================================================================
 function openLabourCodeModal(codeKey) {
     // Create a synthetic message to trigger the specific code view
@@ -553,7 +614,9 @@ function openLabourCodeModal(codeKey) {
         'code_on_wages': 'code on wages',
         'occupational_safety': 'occupational safety code'
     };
+    
     const message = codeNames[codeKey] || 'new labour codes';
+    
     // Send as user message to trigger the detailed view
     document.getElementById("user-input").value = message;
     sendMessage();
@@ -565,35 +628,33 @@ function openLabourCodeDownloadModal(codeKey) {
     const name = localStorage.getItem('userName') || '';
     const company = localStorage.getItem('userCompany') || '';
     const phone = localStorage.getItem('userPhone') || '';
+    const savedDesignation = localStorage.getItem('userDesignation') || '';
+    
+    // Pre-fill form with saved data
+    if (name) document.getElementById('fullName').value = name;
+    if (company) document.getElementById('companyName').value = company;
+    if (email) document.getElementById('email').value = email;
+    if (phone) document.getElementById('contactNumber').value = phone;
+    if (savedDesignation) document.getElementById('designation').value = savedDesignation;
     
     // Show download modal with prefilled data
     currentDownloadData = {
         state: 'India',
         actType: `labour_code_${codeKey}`
     };
+    
     document.getElementById('modalState').value = 'India';
     document.getElementById('modalActType').value = `labour_code_${codeKey}`;
     
     const form = document.getElementById('downloadForm');
     if (form) {
-        form.reset();
-        if (email) document.getElementById('email').value = email;
-        if (name) document.getElementById('fullName').value = name;
-        if (company) document.getElementById('companyName').value = company;
-        if (phone) document.getElementById('contactNumber').value = phone;
-        
-        // Auto-select designation if available in localStorage
-        const savedDesignation = localStorage.getItem('userDesignation');
-        if (savedDesignation) {
-            document.getElementById('designation').value = savedDesignation;
-        }
-        
         form.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
         form.querySelectorAll('input, select').forEach(input => input.classList.remove('error'));
     }
+    
     resetStars();
     
-    // Add hidden note that this is a labour code download
+    // Add note about Google Drive
     const modal = document.getElementById('downloadModal');
     const modalBody = modal.querySelector('.modal-body');
     const existingNote = modalBody.querySelector('.labour-code-note');
@@ -602,16 +663,24 @@ function openLabourCodeDownloadModal(codeKey) {
     const noteDiv = document.createElement('div');
     noteDiv.className = 'labour-code-note';
     noteDiv.innerHTML = `
-<div style="background: #e8f5e9; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 13px;">
-    <i class="fas fa-file-pdf" style="color: #dc3545;"></i>
-    <strong>Downloading:</strong> ${NEW_LABOUR_CODES[codeKey]?.title || 'Labour Code'} PDF
-</div>
-`;
+        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2e7d32;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <i class="fas fa-info-circle" style="color: #2e7d32; font-size: 18px;"></i>
+                <strong style="color: #2e7d32;">${NEW_LABOUR_CODES[codeKey]?.title || 'Labour Code'}</strong>
+            </div>
+            <p style="margin: 0; color: #555; font-size: 13px;">
+                <i class="fab fa-google-drive" style="color: #4285F4;"></i> 
+                After form submission, you'll be redirected to Google Drive to download the PDF.
+            </p>
+        </div>
+    `;
     modalBody.insertBefore(noteDiv, modalBody.firstChild);
     
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
-    setTimeout(() => document.getElementById('fullName')?.focus(), 100);
+    setTimeout(() => {
+        if (!name) document.getElementById('fullName')?.focus();
+    }, 100);
 }
 
 function openComparisonDownloadModal() {
@@ -619,30 +688,29 @@ function openComparisonDownloadModal() {
     const name = localStorage.getItem('userName') || '';
     const company = localStorage.getItem('userCompany') || '';
     const phone = localStorage.getItem('userPhone') || '';
+    const savedDesignation = localStorage.getItem('userDesignation') || '';
+    
+    // Pre-fill form with saved data
+    if (name) document.getElementById('fullName').value = name;
+    if (company) document.getElementById('companyName').value = company;
+    if (email) document.getElementById('email').value = email;
+    if (phone) document.getElementById('contactNumber').value = phone;
+    if (savedDesignation) document.getElementById('designation').value = savedDesignation;
     
     currentDownloadData = {
         state: 'India',
         actType: 'labour_code_comparison'
     };
+    
     document.getElementById('modalState').value = 'India';
     document.getElementById('modalActType').value = 'labour_code_comparison';
     
     const form = document.getElementById('downloadForm');
     if (form) {
-        form.reset();
-        if (email) document.getElementById('email').value = email;
-        if (name) document.getElementById('fullName').value = name;
-        if (company) document.getElementById('companyName').value = company;
-        if (phone) document.getElementById('contactNumber').value = phone;
-        
-        const savedDesignation = localStorage.getItem('userDesignation');
-        if (savedDesignation) {
-            document.getElementById('designation').value = savedDesignation;
-        }
-        
         form.querySelectorAll('.validation-icon, .error-tooltip').forEach(el => el.remove());
         form.querySelectorAll('input, select').forEach(input => input.classList.remove('error'));
     }
+    
     resetStars();
     
     const modal = document.getElementById('downloadModal');
@@ -653,16 +721,24 @@ function openComparisonDownloadModal() {
     const noteDiv = document.createElement('div');
     noteDiv.className = 'labour-code-note';
     noteDiv.innerHTML = `
-<div style="background: #e8f5e9; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 13px;">
-    <i class="fas fa-chart-bar" style="color: #667eea;"></i>
-    <strong>Downloading:</strong> Complete Labour Code Comparison PDF
-</div>
-`;
+        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2e7d32;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <i class="fas fa-chart-bar" style="color: #2e7d32; font-size: 18px;"></i>
+                <strong style="color: #2e7d32;">Complete Labour Code Comparison</strong>
+            </div>
+            <p style="margin: 0; color: #555; font-size: 13px;">
+                <i class="fas fa-file-pdf" style="color: #dc3545;"></i> 
+                You will receive a comprehensive PDF comparing all 4 labour codes.
+            </p>
+        </div>
+    `;
     modalBody.insertBefore(noteDiv, modalBody.firstChild);
     
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
-    setTimeout(() => document.getElementById('fullName')?.focus(), 100);
+    setTimeout(() => {
+        if (!name) document.getElementById('fullName')?.focus();
+    }, 100);
 }
 
 // ============================================================================
@@ -671,6 +747,7 @@ function openComparisonDownloadModal() {
 async function handleFeeSubmit(event) {
     event.preventDefault();
     if (!validateFeeForm()) return;
+    
     showLoadingOverlay();
     
     const formData = {
@@ -687,19 +764,20 @@ async function handleFeeSubmit(event) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
         });
+        
         const data = await response.json();
         
         if (data.success) {
             closeFeeModal();
             addMessage(`
-<div class="success-message-content">
-    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
-    <strong style="font-size: 16px;">✅ Fee Enquiry Submitted Successfully!</strong><br>
-    <p style="margin: 10px 0; color: #666;">Thank you for submitting your enquiry.</p>
-    <p style="margin: 5px 0; color: #666;">📧 Our pricing team will contact you within 24 hours.</p>
-    <p style="margin: 8px 0; color: #1a237e; font-weight: bold;">Support Email: slciaiagent@gmail.com</p>
-</div>
-`, 'bot');
+                <div class="success-message-content">
+                    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
+                    <strong style="font-size: 16px;">✅ Fee Enquiry Submitted Successfully!</strong><br>
+                    <p style="margin: 10px 0; color: #666;">Thank you for submitting your enquiry.</p>
+                    <p style="margin: 5px 0; color: #666;">📧 Our pricing team will contact you within 24 hours.</p>
+                    <p style="margin: 8px 0; color: #1a237e; font-weight: bold;">Support Email: slciaiagent@gmail.com</p>
+                </div>
+            `, 'bot');
             showNotification('Fee enquiry submitted successfully!', 'success');
         } else {
             throw new Error(data.error || "Submission failed");
@@ -729,14 +807,15 @@ function autoFillServiceForm() {
 
 function showSuccessMessage(downloadId) {
     document.querySelectorAll('.success-message').forEach(msg => msg.remove());
+    
     const successDiv = document.createElement('div');
     successDiv.className = 'success-message';
     successDiv.innerHTML = `
-<i class="fas fa-check-circle"></i>
-<div>
-    <strong>✅ Your PDF is Ready!</strong>
-</div>
-`;
+        <i class="fas fa-check-circle"></i>
+        <div>
+            <strong>✅ Your PDF is Ready!</strong>
+        </div>
+    `;
     document.body.appendChild(successDiv);
     
     const chatBox = document.getElementById('chat-box');
@@ -744,17 +823,18 @@ function showSuccessMessage(downloadId) {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'bot-message';
         messageDiv.innerHTML = `
-<div class="message-content">
-    <i class="fas fa-check-circle" style="color: #28a745;"></i>
-    <strong>✅ Your PDF is Downloaded!</strong><br>
-    Thank you for your request! Your download has been initiated.<br>
-    Reference ID: #${downloadId || 'N/A'}
-</div>
-<span class="time">${getCurrentTime()}</span>
-`;
+            <div class="message-content">
+                <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                <strong>✅ Your PDF is Downloaded!</strong><br>
+                Thank you for your request! Your download has been initiated.<br>
+                Reference ID: #${downloadId || 'N/A'}
+            </div>
+            <span class="time">${getCurrentTime()}</span>
+        `;
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
+    
     setTimeout(() => successDiv.remove(), 5000);
 }
 
@@ -774,6 +854,7 @@ function hideLoadingOverlay() {
 function sendMessage() {
     const input = document.getElementById("user-input");
     if (!input) return;
+    
     const message = input.value.trim();
     if (!message) return;
     
@@ -786,6 +867,7 @@ function sendMessage() {
     
     addMessage(message, 'user');
     input.value = "";
+    
     showTypingIndicator();
     
     fetch("/chat", {
@@ -825,7 +907,8 @@ function sendMessage() {
             
             if (actType) {
                 let state = null;
-                const pattern1 = new RegExp(`(?:Minimum Wages|Holiday List|Working Hours|Shop and Establishment Act|Shop & Establishment Act)\\s*[–\-]\s*([A-Za-z\s]+?)(?:<|\n|$)`, 'i');
+                
+                const pattern1 = new RegExp(`(?:Minimum Wages|Holiday List|Working Hours|Shop and Establishment Act|Shop & Establishment Act)\\s*[–\-]\s*([A-Za-z\s]+?)(?:<|\\n|$)`, 'i');
                 const match1 = data.response.match(pattern1);
                 
                 if (match1 && match1[1]) {
@@ -875,14 +958,14 @@ function addServiceEnquiryButton() {
     const buttonDiv = document.createElement('div');
     buttonDiv.className = 'bot-message';
     buttonDiv.innerHTML = `
-<div class="message-content">
-    <p>Would you like to know more about our compliance services?</p>
-    <button onclick="openServiceModal('General Enquiry')" class="service-enquiry-btn">
-        <i class="fas fa-briefcase"></i> Enquire About Services
-    </button>
-</div>
-<span class="time">${getCurrentTime()}</span>
-`;
+        <div class="message-content">
+            <p>Would you like to know more about our compliance services?</p>
+            <button onclick="openServiceModal('General Enquiry')" class="service-enquiry-btn">
+                <i class="fas fa-briefcase"></i> Enquire About Services
+            </button>
+        </div>
+        <span class="time">${getCurrentTime()}</span>
+    `;
     chatBox.appendChild(buttonDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -897,14 +980,14 @@ function addFeeEnquiryButton() {
     const buttonDiv = document.createElement('div');
     buttonDiv.className = 'bot-message';
     buttonDiv.innerHTML = `
-<div class="message-content">
-    <p>📋 Get a customized quotation for your compliance needs:</p>
-    <button onclick="openFeeModal()" class="fee-enquiry-btn">
-        <i class="fas fa-rupee-sign"></i> Contact Us for Pricing
-    </button>
-</div>
-<span class="time">${getCurrentTime()}</span>
-`;
+        <div class="message-content">
+            <p>📋 Get a customized quotation for your compliance needs:</p>
+            <button onclick="openFeeModal()" class="fee-enquiry-btn">
+                <i class="fas fa-rupee-sign"></i> Contact Us for Pricing
+            </button>
+        </div>
+        <span class="time">${getCurrentTime()}</span>
+    `;
     chatBox.appendChild(buttonDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -912,6 +995,7 @@ function addFeeEnquiryButton() {
 function showTypingIndicator() {
     const chatBox = document.getElementById("chat-box");
     if (!chatBox) return;
+    
     const typingDiv = document.createElement("div");
     typingDiv.className = "bot-message typing-container";
     typingDiv.id = "typing-indicator";
@@ -1034,12 +1118,13 @@ function checkOllamaStatus() {
 
 function showNotification(message, type) {
     document.querySelectorAll('.notification').forEach(n => n.remove());
+    
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
-<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-<span>${message}</span>
-`;
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+        <span>${message}</span>
+    `;
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
 }
@@ -1057,74 +1142,74 @@ document.querySelectorAll('.modal-content').forEach(content => {
 // Add dynamic styles
 const style = document.createElement('style');
 style.textContent = `
-.service-enquiry-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white; border: none; padding: 10px 20px;
-    border-radius: 8px; cursor: pointer; font-size: 14px;
-    font-weight: 500; margin-top: 10px; transition: all 0.3s ease;
-    display: inline-flex; align-items: center; gap: 8px;
-}
-.service-enquiry-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-.fee-enquiry-btn {
-    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-    color: white; border: none; padding: 10px 20px;
-    border-radius: 8px; cursor: pointer; font-size: 14px;
-    font-weight: 500; margin-top: 10px; transition: all 0.3s ease;
-    display: inline-flex; align-items: center; gap: 8px;
-}
-.fee-enquiry-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
-}
-.success-message-content {
-    text-align: center; padding: 15px;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    border-radius: 10px; border-left: 4px solid #28a745;
-}
-.success-message-content strong { color: #1a237e; }
-.notification {
-    position: fixed; top: 20px; right: 20px;
-    padding: 12px 20px; border-radius: 8px;
-    color: white; font-weight: 500; z-index: 10000;
-    display: flex; align-items: center; gap: 10px;
-    animation: slideIn 0.3s ease;
-}
-.notification.success { background: #28a745; }
-.notification.error { background: #dc3545; }
-@keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-.success-message {
-    position: fixed; bottom: 20px; right: 20px;
-    background: white; padding: 15px 20px;
-    border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-    display: flex; align-items: center; gap: 12px;
-    z-index: 9999; animation: slideUp 0.3s ease;
-}
-@keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-.validation-icon {
-    position: absolute; right: 12px; top: 50%;
-    transform: translateY(-50%); font-size: 16px;
-}
-.validation-icon.valid { color: #28a745; }
-.validation-icon.invalid { color: #dc3545; }
-.error-tooltip {
-    position: absolute; bottom: -25px; left: 0;
-    background: #dc3545; color: white; padding: 4px 10px;
-    border-radius: 4px; font-size: 11px; white-space: nowrap;
-    z-index: 100; animation: fadeIn 0.2s ease;
-}
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-input.error, select.error {
-    border-color: #dc3545 !important;
-    background-color: #fff5f5 !important;
-}
+    .service-enquiry-btn {
+        background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+        color: white; border: none; padding: 10px 20px;
+        border-radius: 8px; cursor: pointer; font-size: 14px;
+        font-weight: 500; margin-top: 10px; transition: all 0.3s ease;
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .service-enquiry-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+    }
+    .fee-enquiry-btn {
+        background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+        color: white; border: none; padding: 10px 20px;
+        border-radius: 8px; cursor: pointer; font-size: 14px;
+        font-weight: 500; margin-top: 10px; transition: all 0.3s ease;
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .fee-enquiry-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+    }
+    .success-message-content {
+        text-align: center; padding: 15px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        border-radius: 10px; border-left: 4px solid #28a745;
+    }
+    .success-message-content strong { color: #1a237e; }
+    .notification {
+        position: fixed; top: 20px; right: 20px;
+        padding: 12px 20px; border-radius: 8px;
+        color: white; font-weight: 500; z-index: 10000;
+        display: flex; align-items: center; gap: 10px;
+        animation: slideIn 0.3s ease;
+    }
+    .notification.success { background: #28a745; }
+    .notification.error { background: #dc3545; }
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    .success-message {
+        position: fixed; bottom: 20px; right: 20px;
+        background: white; padding: 15px 20px;
+        border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        display: flex; align-items: center; gap: 12px;
+        z-index: 9999; animation: slideUp 0.3s ease;
+    }
+    @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .validation-icon {
+        position: absolute; right: 12px; top: 50%;
+        transform: translateY(-50%); font-size: 16px;
+    }
+    .validation-icon.valid { color: #28a745; }
+    .validation-icon.invalid { color: #dc3545; }
+    .error-tooltip {
+        position: absolute; bottom: -25px; left: 0;
+        background: #dc3545; color: white; padding: 4px 10px;
+        border-radius: 4px; font-size: 11px; white-space: nowrap;
+        z-index: 100; animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    input.error, select.error {
+        border-color: #dc3545 !important;
+        background-color: #fff5f5 !important;
+    }
 `;
 document.head.appendChild(style);
