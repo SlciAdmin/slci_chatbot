@@ -1313,47 +1313,114 @@ def chat():
         state, _ = detect_state(user_message, "shop_establishment")
         if state:
             se_data = fetch_shop_establishment(state)
-            return jsonify({"response": se_data["html"], "state": state, "act_type": "shop_establishment"})
+            if se_data and se_data.get("html"):  # Check if data exists
+                return jsonify({"response": se_data["html"], "state": state, "act_type": "shop_establishment"})
+            else:
+                # No data found for the specified state - show spelling/format error
+                return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <h4 style="color:#856404; margin-top:0;">⚠️ No Data Found</h4>
+                    <p style="color:#856404; margin-bottom:0;">We couldn't find Shop & Establishment Act data for "<strong>{state}</strong>".</p>
+                    <p style="color:#856404; margin-top:10px; margin-bottom:0;">Please check your spelling or try formatting like:</p>
+                    <ul style="color:#856404; margin-top:5px;">
+                        <li>"Shop & Establishment Act of Delhi"</li>
+                        <li>"Shop and Establishment Act Maharashtra"</li>
+                        <li>"SEA Act Karnataka"</li>
+                    </ul>
+                </div>"""})
+        
         if "all states" in user_message or "list all" in user_message:
             se_data = fetch_shop_establishment("all_states")
             return jsonify({"response": se_data["html"], "state": "All States", "act_type": "shop_establishment"})
-        common_states = ["Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh"]
-        suggestions = "".join([f"<li style='padding:5px;'>📍 {state}</li>" for state in common_states])
-        return jsonify({"response": f"""<div style="padding:15px;"><h4 style="color:#1a237e;">Please specify a state</h4><p>Example: "Shop & Establishment Act of Delhi"</p><p>Common states:</p><ul style="list-style-type:none; padding:0;">{suggestions}</ul></div>"""})
+        
+        # If no state detected but query is about shop establishment
+        return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+            <h4 style="color:#856404; margin-top:0;">⚠️ Please Specify a State</h4>
+            <p style="color:#856404; margin-bottom:0;">Please mention the state name in your query.</p>
+            <p style="color:#856404; margin-top:10px; margin-bottom:0;">Example: "Shop & Establishment Act of Delhi"</p>
+        </div>"""})
     
     # Holiday list queries
     if "holiday" in user_message:
         state, url = detect_state(user_message, "holiday_list")
         if state:
             holiday_data = fetch_holiday_list(state)
-            if holiday_data:
+            if holiday_data and holiday_data.get("html"):  # Check if data exists
                 return jsonify({"response": holiday_data["html"], "state": state, "act_type": "holiday_list"})
-        common_states = ["Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "West Bengal"]
-        suggestions = "".join([f"<li style='padding:5px;'>📅 {state}</li>" for state in common_states])
-        return jsonify({"response": f"""<div style="padding:15px;"><h4 style="color:#1a237e;">Please specify a state for Holiday List</h4><p>Example: "Holiday list of Maharashtra"</p><p>Common states:</p><ul style="list-style-type:none; padding:0;">{suggestions}</ul></div>"""})
+            else:
+                # No data found for the specified state - show spelling/format error
+                return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <h4 style="color:#856404; margin-top:0;">⚠️ No Holiday Data Found</h4>
+                    <p style="color:#856404; margin-bottom:0;">We couldn't find holiday list for "<strong>{state}</strong>".</p>
+                    <p style="color:#856404; margin-top:10px; margin-bottom:0;">Please check your spelling or try formatting like:</p>
+                    <ul style="color:#856404; margin-top:5px;">
+                        <li>"Holiday list of Maharashtra"</li>
+                        <li>"Holidays in Delhi 2024"</li>
+                        <li>"Public holidays Karnataka"</li>
+                    </ul>
+                </div>"""})
+        
+        # If no state detected but query is about holidays
+        return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+            <h4 style="color:#856404; margin-top:0;">⚠️ Please Specify a State</h4>
+            <p style="color:#856404; margin-bottom:0;">Please mention the state name in your query.</p>
+            <p style="color:#856404; margin-top:10px; margin-bottom:0;">Example: "Holiday list of Maharashtra"</p>
+        </div>"""})
     
     # Working hours queries
     if "working hours" in user_message or "working hour" in user_message:
         state, url = detect_state(user_message, "working_hours")
         if state:
             wh_data = fetch_working_hours(state)
-            if wh_data:
+            if wh_data and wh_data.get("html"):  # Check if data exists
                 return jsonify({"response": wh_data["html"], "state": state, "act_type": "working_hours"})
-        common_states = ["Delhi", "Maharashtra", "Karnataka", "Gujarat", "Telangana"]
-        suggestions = "".join([f"<li style='padding:5px;'>⏰ {state}</li>" for state in common_states])
-        return jsonify({"response": f"""<div style="padding:15px;"><h4 style="color:#1a237e;">Please specify a state for Working Hours</h4><p>Example: "Working hours of Delhi"</p><p>Common states:</p><ul style="list-style-type:none; padding:0;">{suggestions}</ul></div>"""})
+            else:
+                # No data found for the specified state - show spelling/format error
+                return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <h4 style="color:#856404; margin-top:0;">⚠️ No Working Hours Data Found</h4>
+                    <p style="color:#856404; margin-bottom:0;">We couldn't find working hours information for "<strong>{state}</strong>".</p>
+                    <p style="color:#856404; margin-top:10px; margin-bottom:0;">Please check your spelling or try formatting like:</p>
+                    <ul style="color:#856404; margin-top:5px;">
+                        <li>"Working hours of Delhi"</li>
+                        <li>"Working hours in Maharashtra"</li>
+                        <li>"Shop working hours Karnataka"</li>
+                    </ul>
+                </div>"""})
+        
+        # If no state detected but query is about working hours
+        return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+            <h4 style="color:#856404; margin-top:0;">⚠️ Please Specify a State</h4>
+            <p style="color:#856404; margin-bottom:0;">Please mention the state name in your query.</p>
+            <p style="color:#856404; margin-top:10px; margin-bottom:0;">Example: "Working hours of Delhi"</p>
+        </div>"""})
     
     # Minimum wages queries
     if "minimum wage" in user_message or "minimum wages" in user_message:
         state, url = detect_state(user_message, "minimum_wages")
         if state:
             wages_data = fetch_minimum_wages(state)
-            if wages_data:
+            if wages_data and wages_data.get("html"):  # Check if data exists
                 return jsonify({"response": wages_data["html"], "state": state, "act_type": "minimum_wages"})
-        common_states = ["Delhi", "Maharashtra", "Karnataka", "Tamil Nadu", "Uttar Pradesh"]
-        suggestions = "".join([f"<li style='padding:5px;'>💰 {state}</li>" for state in common_states])
-        return jsonify({"response": f"""<div style="padding:15px;"><h4 style="color:#1a237e;">Please specify a state for Minimum Wages</h4><p>Example: "Minimum wages of Delhi"</p><p>Common states:</p><ul style="list-style-type:none; padding:0;">{suggestions}</ul></div>"""})
+            else:
+                # No data found for the specified state - show spelling/format error
+                return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <h4 style="color:#856404; margin-top:0;">⚠️ No Minimum Wages Data Found</h4>
+                    <p style="color:#856404; margin-bottom:0;">We couldn't find minimum wages information for "<strong>{state}</strong>".</p>
+                    <p style="color:#856404; margin-top:10px; margin-bottom:0;">Please check your spelling or try formatting like:</p>
+                    <ul style="color:#856404; margin-top:5px;">
+                        <li>"Minimum wages of Delhi"</li>
+                        <li>"Minimum wage rate Maharashtra"</li>
+                        <li>"Minimum wages Karnataka 2024"</li>
+                    </ul>
+                </div>"""})
+        
+        # If no state detected but query is about minimum wages
+        return jsonify({"response": f"""<div style="padding:15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+            <h4 style="color:#856404; margin-top:0;">⚠️ Please Specify a State</h4>
+            <p style="color:#856404; margin-bottom:0;">Please mention the state name in your query.</p>
+            <p style="color:#856404; margin-top:10px; margin-bottom:0;">Example: "Minimum wages of Delhi"</p>
+        </div>"""})
     
+    # Rest of your code remains the same...
     # Services list query
     service_keywords = ["services of slci", "what does slci do", "your services", "services you offer", "list of services", "slci services"]
     if any(phrase in user_message for phrase in service_keywords):
@@ -1383,7 +1450,6 @@ def chat():
     
     # Fallback response
     return jsonify({"response": """<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #0d6efd;"><p style="margin: 0; color: #333;">Thank you for contacting <strong>Shakti Legal Compliance India</strong>.</p><p style="margin-top: 8px; color: #555;">For detailed assistance regarding your query, please contact our team.</p><div style="margin-top: 10px; color: #444;">📞 <strong>Phone:</strong> +91 9999329153<br>📧 <strong>Email:</strong> info@slci-india.com</div></div>"""})
-
 def generate_enquiry_id(prefix="ENQ"):
     """Generate a unique enquiry ID"""
     date_part = datetime.now().strftime("%Y%m%d")
