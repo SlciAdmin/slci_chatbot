@@ -1160,7 +1160,7 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 <div class="field"><div class="label">❓ Query</div><div class="value" style="white-space:pre-wrap">{data['query']}</div></div>
 <div class="field"><div class="label">📅 Submitted</div><div class="value">{datetime.now().strftime('%d %b %Y, %I:%M %p IST')}</div></div>
 </div>
-<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
+<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 contact@slci.in | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
         
         text_body = f"""SERVICE ENQUIRY #{enquiry_id}
@@ -1243,7 +1243,7 @@ body{{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;co
 <div class="field"><div class="label">📝 Requirements</div><div class="value" style="white-space:pre-wrap">{data['description']}</div></div>
 <div class="field"><div class="label">📅 Submitted</div><div class="value">{datetime.now().strftime('%d %b %Y, %I:%M %p IST')}</div></div>
 </div>
-<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 info@slci-india.com | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
+<div class="footer"><p><strong>Shakti Legal Compliance India</strong></p><p>📧 contact@slci.in | 📞 +91 9999329153</p><p>🌐 www.slci.in</p></div>
 </div></body></html>"""
         
         text_body = f"""FEE ENQUIRY #{enquiry_id}
@@ -1547,7 +1547,7 @@ def chat():
             return jsonify({"response": ollama_response})
     
     # Fallback response
-    return jsonify({"response": """<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #0d6efd;"><p style="margin: 0; color: #333;">Thank you for contacting <strong>Shakti Legal Compliance India</strong>.</p><p style="margin-top: 8px; color: #555;">For detailed assistance regarding your query, please contact our team.</p><div style="margin-top: 10px; color: #444;">📞 <strong>Phone:</strong> +91 9999329153<br>📧 <strong>Email:</strong> info@slci-india.com</div></div>"""})
+    return jsonify({"response": """<div style="padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #0d6efd;"><p style="margin: 0; color: #333;">Thank you for contacting <strong>Shakti Legal Compliance India</strong>.</p><p style="margin-top: 8px; color: #555;">For detailed assistance regarding your query, please contact our team.</p><div style="margin-top: 10px; color: #444;">📞 <strong>Phone:</strong> +91 9999329153<br>📧 <strong>Email:</strong> contact@slci.in</div></div>"""})
 def generate_enquiry_id(prefix="ENQ"):
     """Generate a unique enquiry ID"""
     date_part = datetime.now().strftime("%Y%m%d")
@@ -2418,7 +2418,7 @@ RESPONSES = {
     "what is slci": "SLCI (Shakti Legal Compliance India) is a premier legal compliance consultancy firm established to help businesses navigate complex Indian labor laws and regulations.",
     "full form of slci": "SLCI stands for Shakti Legal Compliance India. 'Shakti' represents strength in Sanskrit.",
     "contact number": "📞 Mobile: +91 9999329153 | Mobile :- 8373917131",
-    "email": "info@slci-india.com",
+    "email": "contact@slci.in",
     "address": """<div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea;"><h3 style="color: #667eea; margin-top: 0;">📍 Our Office Address</h3><p style="color: #333; font-size: 16px; line-height: 1.6; margin: 15px 0;">83, DSIDC COMPLEX,<br>Okhla I Rd, Pocket C,<br>Okhla Phase I, Okhla Industrial Estate,<br>New Delhi, Delhi 110020</p><div style="margin: 20px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"><iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.1234567890123!2d77.2818578!3d28.525507!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390ce1b166f71281%3A0x78602061339ccb61!2sShakti%20Legal%20Compliance%20India%20(SLCI)!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin" width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div><div style="text-align: center; margin-top: 20px;"><a href="https://www.google.com/maps/place/Shakti+Legal+Compliance+India+(SLCI)/@28.5253303,77.2827107,18z/data=!3m1!4b1!4m6!3m5!1s0x390ce1b166f71281:0x78602061339ccb61!8m2!3d28.525507!4d77.2818578!16s%2Fg%2F11j0ww1tn5?entry=ttu" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">🗺️ Click here to open in Google Maps</a></div></div>""",
     "timing": """<div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea;"><h3 style="color: #667eea; margin-top: 0;">🕒 Office Timing</h3><p style="color: #333; font-size: 16px; line-height: 1.8; margin: 15px 0;"><strong>Monday - Saturday:</strong> 9:00 AM to 6:00 PM<br><strong>Sunday:</strong> Closed</p><p style="color: #666; font-size: 14px; margin-top: 15px; font-style: italic;">* We recommend scheduling appointments in advance for personalized consultation.</p></div>""",
     "why slci": """<div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 25px; border-radius: 12px; border: 1px solid #667eea30;"><h3 style="color: #667eea; margin-top: 0;">✨ Why Choose SLCI?</h3><div style="margin: 20px 0;"><p style="color: #333; font-size: 18px; font-weight: 600; margin: 10px 0;">🏆 38+ Years of Experience in the Field of Law</p><p style="color: #555; font-size: 15px; line-height: 1.7; margin: 15px 0;">We help clients achieve their goals by providing <strong>high-quality, ethically sound legal counsel</strong> and <strong>strategic advice</strong> tailored to your business needs.</p></div><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;"><div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);"><strong style="color: #667eea;">✅</strong> Expert Legal Team</div><div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);"><strong style="color: #667eea;">✅</strong> Pan-India Coverage</div><div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);"><strong style="color: #667eea;">✅</strong> 24/7 Support</div><div style="background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);"><strong style="color: #667eea;">✅</strong> Cost-Effective Solutions</div></div><p style="color: #667eea; font-weight: 500; margin-top: 20px; text-align: center;">🤝 Your Compliance Partner for Growth & Peace of Mind</p></div>""",
